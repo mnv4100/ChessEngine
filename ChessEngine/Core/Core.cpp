@@ -58,7 +58,7 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
         }
         // Avance double depuis la position de départ
         else if (dX == 0 && dY == 2 * direction && from.y == startRow && toCell.fill == 0) {
-            Vec2 intermediate = { from.x, from.y + direction };
+            Vec2 intermediate = { static_cast<uint8_t>(from.x), static_cast<uint8_t>(from.y + direction) };
             if (At(intermediate).fill == 0) {
                 legal = true;
             }
@@ -122,7 +122,7 @@ bool Core::isPathClear(const Vec2& from, const Vec2& to) const
     int stepX = (to.x > from.x) ? 1 : (to.x < from.x) ? -1 : 0;
     int stepY = (to.y > from.y) ? 1 : (to.y < from.y) ? -1 : 0;
 
-    Vec2 current = { from.x + stepX, from.y + stepY };
+    Vec2 current = { static_cast<uint8_t>(from.x + stepX), static_cast<uint8_t>(from.y + stepY) };
 
     while (current.x != to.x || current.y != to.y) {
         if (At(current).fill == 1) {
