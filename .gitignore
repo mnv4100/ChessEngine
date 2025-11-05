@@ -1,0 +1,46 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+.vs/
+*.sln
+*.vcxproj*
+*.user
+*.opendb
+*.VC.db
+
+# CLion and JetBrains IDE files
+.idea/
+*.iml
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+Testing/
+Makefile
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+cmake_install.cmake
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Raylib assets or external binaries (optional, adjust to your project)
+*.exe
+*.dll
+*.so
+*.dylib
