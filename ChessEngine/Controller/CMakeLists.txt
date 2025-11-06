@@ -1,15 +1,15 @@
-# Controller library currently has no source files; expose as INTERFACE for dependencies
-add_library(ControllerLib INTERFACE
+# Build Controller as a real library so its sources are compiled and linked
+add_library(ControllerLib STATIC
         Controller.cpp
-        Controller.h)
-
-# Expose include path to dependents
-target_include_directories(ControllerLib
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Link dependencies transitively
+# Public include directory for dependents
+target_include_directories(ControllerLib
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Link dependencies (raylib is linked at the executable, keep it there)
 target_link_libraries(ControllerLib
-        INTERFACE CoreLib
-        INTERFACE IOLib
+        PUBLIC CoreLib
+        PUBLIC IOLib
 )

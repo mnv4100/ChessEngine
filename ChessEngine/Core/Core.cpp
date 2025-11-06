@@ -21,7 +21,7 @@ void Core::debugDisplayChessBoard() const
 
 bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
 {
-    if (!isMoveInBounds(from) && !isMoveInBounds(to)) {
+    if (!isMoveInBounds(from) || !isMoveInBounds(to)) {
         std::cout << "Move out of bounds\n";
         return false;
     }
@@ -47,8 +47,8 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
 
     case static_cast<int>(PIECE::Pion): {
         SIDE side = static_cast<SIDE>(fromCell.side);
-        int direction = (side == SIDE::WHITE_SIDE) ? 1 : -1;  
-        int startRow = (side == SIDE::WHITE_SIDE) ? 1 : 6;    
+        int direction = (side == SIDE::WHITE_SIDE) ? -1 : 1;  
+        int startRow = (side == SIDE::WHITE_SIDE) ? 6 : 1;    
         int dX = to.x - from.x;
         int dY = to.y - from.y;
 
@@ -155,21 +155,45 @@ bool Core::movePiece(const Vec2& from, const Vec2& to)
     return true;
 }
 
+// TODO: Optimize, this is really bad
+
+std::vector<Vec2> Core::getPossibleMoves(const Vec2 &from) const {
+    std::vector<Vec2> moves;
+
+    // Validate source square
+    if (!isMoveInBounds(from)) return moves;
+    const BoardCell &fromCell = At(from);
+    if (fromCell.fill == 0) return moves;
+
+    // Enumerate all board squares and collect legal moves
+    for (uint8_t y = 0; y < 8; ++y) {
+        for (uint8_t x = 0; x < 8; ++x) {
+            Vec2 to{ x, y };
+            if (to.x == from.x && to.y == from.y) continue; // skip same square
+            if (isMoveLegal(from, to)) {
+                moves.push_back(to);
+            }
+        }
+    }
+
+    return moves;
+}
+
 void Core::fillChessBoard()
 {
     for (size_t y = 0; y < 8; ++y) {
         for (size_t x = 0; x < 8; ++x) {
 
-            if (y == 0) { // White back rank
+            if (y == 7) { // White back rank at bottom
                 chessBoard[y][x] = makeCell(white_back_rank[x], SIDE::WHITE_SIDE, true);
             }
-            else if (y == 1) { // White pawns
+            else if (y == 6) { // White pawns
                 chessBoard[y][x] = makeCell(PIECE::Pion, SIDE::WHITE_SIDE, true);
             }
-            else if (y == 6) { // Black pawns
+            else if (y == 1) { // Black pawns
                 chessBoard[y][x] = makeCell(PIECE::Pion, SIDE::BLACK_SIDE, true);
             }
-            else if (y == 7) { // Black back rank
+            else if (y == 0) { // Black back rank at top
                 chessBoard[y][x] = makeCell(black_back_rank[x], SIDE::BLACK_SIDE, true);
             }
             else { // Empty squares

@@ -11,9 +11,9 @@ struct Vec2 {
 enum class PIECE : uint8_t {
 	King = 0,
 	Queen = 1,
-	Rook = 2,
-	Bishop = 3,
-	Knight = 4,
+	Rook = 4,
+	Bishop = 2,
+	Knight = 3,
 	Pion = 5
 };
 

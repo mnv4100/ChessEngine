@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <array>
 #include <map>
+#include <vector>
+
 #include "definition.h"
 
 /*
@@ -32,6 +34,7 @@ public:
 	bool isMoveLegal(const Vec2& from, const Vec2& to) const;
 	bool isPathClear(const Vec2& from, const Vec2& to) const;
 	bool movePiece(const Vec2& from, const Vec2& to);
+	std::vector<Vec2> getPossibleMoves(const Vec2& from) const;
 
 	[[nodiscard]] inline const BoardCell& At(const Vec2& pos) const { return chessBoard[pos.y][pos.x]; }
 	[[nodiscard]] inline BoardCell& At(const Vec2& pos) { return chessBoard[pos.y][pos.x]; }
