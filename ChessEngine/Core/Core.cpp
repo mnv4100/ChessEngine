@@ -52,18 +52,18 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
         int dX = to.x - from.x;
         int dY = to.y - from.y;
 
-        // Avance simple
+		// 1 Step forward
         if (dX == 0 && dY == direction && toCell.fill == 0) {
             legal = true;
         }
-        // Avance double depuis la position de départ
+		// 2 Steps forward from starting position
         else if (dX == 0 && dY == 2 * direction && from.y == startRow && toCell.fill == 0) {
             Vec2 intermediate = { static_cast<uint8_t>(from.x), static_cast<uint8_t>(from.y + direction) };
             if (At(intermediate).fill == 0) {
                 legal = true;
             }
         }
-        // Capture en diagonale
+		// Capture diagonally
         else if (abs(dX) == 1 && dY == direction && toCell.fill == 1) {
             legal = true;
         }
@@ -71,7 +71,6 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
     }
 
     case static_cast<int>(PIECE::Rook): {
-        // Se déplace horizontalement ou verticalement
         if (deltaX == 0 || deltaY == 0) {
             legal = isPathClear(from, to);
         }

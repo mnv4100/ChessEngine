@@ -12,9 +12,6 @@
 
 #include "definition.h"
 
-// refactor we're gonna be using a chessBoard[32] packed with 2 cells per byte later
-// each cell is 4 bits packed into a byte
-
 class Core {
 
 public:
@@ -37,7 +34,7 @@ private:
 	constexpr inline BoardCell makeCell(PIECE p, SIDE s, bool occupied) noexcept;
 	std::map<SIDE, std::map<PIECE, uint8_t>> takenPiecesCount;
 	
-	// 1D array to use full one line of cache 64 bits on intel x86 
+	// 1D array to use full one line of cache 64 bits
 	alignas(64) BoardCell chessBoard[64]{};
 };
 

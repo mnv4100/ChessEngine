@@ -1,8 +1,6 @@
 
 #include "Controller.h"
 
-#include <iostream>
-
 #include "raylib.h"
 
 
