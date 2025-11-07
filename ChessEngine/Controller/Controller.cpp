@@ -1,5 +1,8 @@
 
 #include "Controller.h"
+
+#include <iostream>
+
 #include "raylib.h"
 
 
@@ -15,7 +18,9 @@ void Controller::startGame(Io *io, Core *core) {
 
         // Render board and pieces
         io->renderChessBoard(*core);
-
+        // Debug: show FPS
+        DrawFPS(10, 10);
+        
         // Handle input
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             Vec2 clicked{};

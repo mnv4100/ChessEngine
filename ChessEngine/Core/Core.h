@@ -12,6 +12,9 @@
 
 #include "definition.h"
 
+// refactor we're gonna be using a chessBoard[32] packed with 2 cells per byte later
+// each cell is 4 bits packed into a byte
+
 class Core {
 
 public:
@@ -24,16 +27,18 @@ public:
 	bool movePiece(const Vec2& from, const Vec2& to);
 	std::vector<Vec2> getPossibleMoves(const Vec2& from) const;
 
-	[[nodiscard]] const BoardCell& At(const Vec2& pos) const { return chessBoard[pos.y][pos.x]; }
-	[[nodiscard]] BoardCell& At(const Vec2& pos) { return chessBoard[pos.y][pos.x]; }
+	[[nodiscard]] const BoardCell& At(const Vec2& pos) const { return chessBoard[pos.y * 8 + pos.x];  };
+	[[nodiscard]] BoardCell& At(const Vec2& pos) { return chessBoard[pos.y * 8 + pos.x]; };
 
 private:
 	void fillChessBoard();
 	[[nodiscard]] inline bool isMoveInBounds(const Vec2& cell) const;
 
-	inline BoardCell makeCell(PIECE p, SIDE s, bool occupied);
+	constexpr inline BoardCell makeCell(PIECE p, SIDE s, bool occupied) noexcept;
 	std::map<SIDE, std::map<PIECE, uint8_t>> takenPiecesCount;
-	BoardCell chessBoard[8][8]{};
+	
+	// 1D array to use full one line of cache 64 bits on intel x86 
+	alignas(64) BoardCell chessBoard[64]{};
 };
 
 

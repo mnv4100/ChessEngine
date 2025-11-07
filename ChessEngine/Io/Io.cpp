@@ -3,7 +3,7 @@
 Io::Io()
 {
 	InitWindow(windowSizeX, windowSizeY, "Super Chess Engine");
-	SetTargetFPS(60);
+	SetTargetFPS(144);
 
 	chessPieceTexture = LoadTexture(ASSETS_PATH "Chess_Pieces_Sprite.svg.png");
 	debugFont = LoadFont(ASSETS_PATH "MONARK.otf");
@@ -37,7 +37,8 @@ void Io::renderChessBoard(Core& core) const {
 			if (!possibleMovesToRender.empty()) {
 				for (auto& move : possibleMovesToRender) {
 					if (move.x == x && move.y == y) {
-						DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, RED);
+						//DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, RED);
+						DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
 					}
 				}
 			}

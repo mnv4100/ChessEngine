@@ -1,14 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.10)
 project(ChessEngineProject)
 
-# Enable MSVC hot reload if supported
+# Politique pour MSVC
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
-      "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,\
-      $<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,\
-      $<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
+
+# Forcer la runtime dynamique (/MD ou /MDd)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
 
 # Fetch raylib
 include(FetchContent)

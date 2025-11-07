@@ -13,7 +13,7 @@ void Core::debugDisplayChessBoard() const
     for (size_t y = 0; y < 8; ++y) {
         std::cout << "\n";
         for (size_t x = 0; x < 8; ++x) {
-            std::cout << static_cast<int>(chessBoard[y][x].piece) << " ";
+            std::cout << static_cast<int>(chessBoard[y * 8 + x].piece ) << " ";
         }
     }
     std::cout << "\n";
@@ -179,22 +179,25 @@ std::vector<Vec2> Core::getPossibleMoves(const Vec2 &from) const {
     return moves;
 }
 
+
+
 void Core::fillChessBoard()
 {
     for (size_t y = 0; y < 8; ++y) {
         for (size_t x = 0; x < 8; ++x) {
+            size_t index = y * 8 + x;
 
             if (y == 7) { // White back rank at bottom
-                chessBoard[y][x] = makeCell(white_back_rank[x], SIDE::WHITE_SIDE, true);
+                chessBoard[index] = makeCell(white_back_rank[x], SIDE::WHITE_SIDE, true);
             }
             else if (y == 6) { // White pawns
-                chessBoard[y][x] = makeCell(PIECE::Pion, SIDE::WHITE_SIDE, true);
+                chessBoard[index] = makeCell(PIECE::Pion, SIDE::WHITE_SIDE, true);
             }
             else if (y == 1) { // Black pawns
-                chessBoard[y][x] = makeCell(PIECE::Pion, SIDE::BLACK_SIDE, true);
+                chessBoard[index] = makeCell(PIECE::Pion, SIDE::BLACK_SIDE, true);
             }
             else if (y == 0) { // Black back rank at top
-                chessBoard[y][x] = makeCell(black_back_rank[x], SIDE::BLACK_SIDE, true);
+                chessBoard[index] = makeCell(black_back_rank[x], SIDE::BLACK_SIDE, true);
             }
             else { // Empty squares
             }
@@ -207,11 +210,22 @@ inline bool Core::isMoveInBounds(const Vec2& cell) const
     return cell.x < 8 && cell.y < 8;
 }
 
-inline BoardCell Core::makeCell(PIECE p, SIDE s, bool occupied)
-{
-    BoardCell cell{};
-    cell.piece = static_cast<uint8_t>(p);
-    cell.side = static_cast<uint8_t>(s);
-    cell.fill = occupied ? 1 : 0;
+constexpr inline BoardCell Core::makeCell(PIECE p, SIDE s, bool occupied) noexcept {    
+    
+    BoardCell cell {};
+
+    // 3 bits are still not used
+    // TODO: Removing the flag to use only 4 bits so can align a 4 bits value
+    constexpr uint8_t PIECE_MASK = 0b0000'0111; 
+    constexpr uint8_t SIDE_MASK = 0b0000'1000;  
+    constexpr uint8_t FILL_MASK = 0b0001'0000;  
+    // Combine all fields into one byte
+    
+    cell.raw =
+        (static_cast<uint8_t>(p) & PIECE_MASK) |  
+        ((static_cast<uint8_t>(s) << 3) & SIDE_MASK) | 
+        (occupied ? FILL_MASK : 0);                   
+
     return cell;
 }
+
