@@ -5,9 +5,6 @@
 #include "../Core/Core.h"
 #include "../Io/Io.h"
 
-// Implementing a turn black or white can move
-
-
 class Controller {
 public:
     explicit Controller() {};
