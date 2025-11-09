@@ -1,21 +1,31 @@
-
 #include "Controller.h"
 
 #include "raylib.h"
 
 
+// TODO: the board should be rendered only once, and only pieces should be updated
+
 void Controller::startGame(Io *io, Core *core) {
-    // Game state
     bool hasSelection = false;
+    
     Vec2 selected{};
+    
     SIDE toMove = SIDE::WHITE_SIDE;
 
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
+        // Check if current player's king is in check
+        Vec2 *checkedKingPos = nullptr;
+        Vec2 kingPos;
+        if (core->isKingInCheck(toMove)) {
+            kingPos = core->findKing(toMove);
+            checkedKingPos = &kingPos;
+        }
+
         // Render board and pieces
-        io->renderChessBoard(*core);
+        io->renderChessBoard(*core, checkedKingPos);
         // Debug: show FPS
         DrawFPS(10, 10);
         
@@ -45,7 +55,7 @@ void Controller::startGame(Io *io, Core *core) {
                     // Try moving
                     bool moved = core->movePiece(selected, clicked);
                     if (moved) {
-                        // Switch turn
+                        
                         toMove = (toMove == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
                         hasSelection = false;
                         // Clear highlights after move

@@ -19,6 +19,7 @@ void Core::debugDisplayChessBoard() const
     std::cout << "\n";
 }
 
+
 bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
 {
     if (!isMoveInBounds(from) || !isMoveInBounds(to)) {
@@ -46,7 +47,7 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
     switch (fromCell.piece) {
 
     case static_cast<int>(PIECE::Pion): {
-        SIDE side = static_cast<SIDE>(fromCell.side);
+        auto side = static_cast<SIDE>(fromCell.side);
         int direction = (side == SIDE::WHITE_SIDE) ? -1 : 1;  
         int startRow = (side == SIDE::WHITE_SIDE) ? 6 : 1;    
         int dX = to.x - from.x;
@@ -134,22 +135,75 @@ bool Core::isPathClear(const Vec2& from, const Vec2& to) const
     return true;
 }
 
-bool Core::movePiece(const Vec2& from, const Vec2& to)
-{
+// Function to find king position
+Vec2 Core::findKing(SIDE side) const {
+    for (uint8_t y = 0; y < 8; ++y) {
+        for (uint8_t x = 0; x < 8; ++x) {
+            const BoardCell& cell = At({x, y});
+            if (cell.fill == 1 && 
+                cell.side == static_cast<uint8_t>(side) && 
+                cell.piece == static_cast<uint8_t>(PIECE::King)) {
+                return {x, y};
+            }
+        }
+    }
+    // This should never happen in a valid chess game
+    return {0, 0};
+}
+
+bool Core::isKingInCheck(SIDE kingSide) const {
+    // Find the king's position
+    Vec2 kingPos = findKing(kingSide);
+    
+    // Check if any opponent piece can capture the king
+    SIDE opponentSide = (kingSide == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
+    
+    // Check all squares for opponent pieces
+    for (uint8_t y = 0; y < 8; ++y) {
+        for (uint8_t x = 0; x < 8; ++x) {
+            Vec2 from{x, y};
+            const BoardCell& cell = At(from);
+            
+            // If we find an opponent piece
+            if (cell.fill == 1 && cell.side == static_cast<uint8_t>(opponentSide)) {
+                // Check if it can legally move to the king's position
+                if (isMoveLegal(from, kingPos)) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+bool Core::movePiece(const Vec2& from, const Vec2& to) {
     if (!isMoveLegal(from, to)) {
         return false;
     }
 
+    // Store the original state to restore if the move puts own king in check
+    BoardCell originalFrom = At(from);
+    BoardCell originalTo = At(to);
+
+    // Make the move
     auto& fromCase = At(from);
     auto& toCase = At(to);
 
-    // Copier la pièce vers la destination
     toCase.piece = fromCase.piece;
     toCase.side = fromCase.side;
     toCase.fill = 1;
+    fromCase.raw = 0;
 
-    // Vider la case source
-    fromCase.raw = 0;  
+    // Check if the move puts/leaves own king in check
+    SIDE movingSide = static_cast<SIDE>(originalFrom.side);
+    if (isKingInCheck(movingSide)) {
+        // Restore the original position
+        At(from) = originalFrom;
+        At(to) = originalTo;
+        std::cout << "Move would put/leave own king in check\n";
+        return false;
+    }
 
     return true;
 }

@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by Pc on 05/11/2025.
 //
 
@@ -12,6 +12,7 @@
 
 #include "definition.h"
 
+
 class Core {
 
 public:
@@ -22,7 +23,9 @@ public:
 	bool isMoveLegal(const Vec2& from, const Vec2& to) const;
 	bool isPathClear(const Vec2& from, const Vec2& to) const;
 	bool movePiece(const Vec2& from, const Vec2& to);
+	[[nodiscard]] bool isKingInCheck(SIDE kingSide) const;
 	std::vector<Vec2> getPossibleMoves(const Vec2& from) const;
+	[[nodiscard]] Vec2 findKing(SIDE side) const;
 
 	[[nodiscard]] const BoardCell& At(const Vec2& pos) const { return chessBoard[pos.y * 8 + pos.x];  };
 	[[nodiscard]] BoardCell& At(const Vec2& pos) { return chessBoard[pos.y * 8 + pos.x]; };
@@ -32,11 +35,14 @@ private:
 	[[nodiscard]] inline bool isMoveInBounds(const Vec2& cell) const;
 
 	constexpr inline BoardCell makeCell(PIECE p, SIDE s, bool occupied) noexcept;
-	std::map<SIDE, std::map<PIECE, uint8_t>> takenPiecesCount;
 	
+	
+	std::map<SIDE, std::map<PIECE, uint8_t>> takenPiecesCount;
+
+
 	// 1D array to use full one line of cache 64 bits
 	alignas(64) BoardCell chessBoard[64]{};
 };
 
 
-#endif //CHESSENGINEPROJECT_CORE_H
+#endif //CHESSENGINEPROJECT_CORE_H#endif //CHESSENGINEPROJECT_CORE_H

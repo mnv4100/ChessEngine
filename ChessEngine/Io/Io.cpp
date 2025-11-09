@@ -17,7 +17,7 @@ Io::~Io()
 }
 
 // Board
-void Io::renderChessBoard(Core& core) const {
+void Io::renderChessBoard(Core& core, const Vec2* checkedKingPos) const {
 	if (chessPieceTexture.id == 0) return;
 
 	const int pieceWidth = chessPieceTexture.width / 6;
@@ -27,17 +27,20 @@ void Io::renderChessBoard(Core& core) const {
 		for (uint8_t x = 0; x < 8; ++x) {
 			const BoardCell& cell = core.At(Vec2{ x, y });
 
-			// case pair light gray impart dark
-			const Color color = (x + y) % 2 == 0
-					? LIGHTGRAY
-					: DARKGRAY;
+			Color color;
+			// Si le roi est en échec et que c'est sa position, colorier en rouge
+			if (checkedKingPos && checkedKingPos->x == x && checkedKingPos->y == y) {
+				color = RED;
+			} else {
+				// case pair light gray impart dark
+				color = (x + y) % 2 == 0 ? LIGHTGRAY : DARKGRAY;
+			}
 
-			DrawRectangle(x * cellSize, y * cellSize,cellSize, cellSize, color);
+			DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
 
 			if (!possibleMovesToRender.empty()) {
 				for (auto& move : possibleMovesToRender) {
 					if (move.x == x && move.y == y) {
-						//DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, RED);
 						DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
 					}
 				}
@@ -81,6 +84,8 @@ void Io::getOveredCell(Vec2& cell) const {
 	cell.x = static_cast<uint8_t>(ix);
 	cell.y = static_cast<uint8_t>(iy);
 }
+
+
 
 
 

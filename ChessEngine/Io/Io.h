@@ -9,7 +9,7 @@ public:
 	explicit Io();
 	~Io();
 
-	void renderChessBoard(Core& core) const;
+	void renderChessBoard(Core& core, const Vec2* checkedKingPos = nullptr) const;
 	void getOveredCell(Vec2& cell) const;
 
 	// get a reference to the possibleMovesToRender;
