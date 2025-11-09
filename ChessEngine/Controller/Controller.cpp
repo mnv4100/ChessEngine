@@ -2,15 +2,66 @@
 
 #include "raylib.h"
 
+#include <string>
+#include <vector>
+
+
+namespace {
+
+std::string squareToNotation(const Vec2& pos) {
+    char file = static_cast<char>('a' + pos.x);
+    char rank = static_cast<char>('8' - pos.y);
+    return { file, rank };
+}
+
+char pieceToSymbol(uint8_t piece) {
+    switch (static_cast<PIECE>(piece)) {
+        case PIECE::King: return 'K';
+        case PIECE::Queen: return 'Q';
+        case PIECE::Rook: return 'R';
+        case PIECE::Bishop: return 'B';
+        case PIECE::Knight: return 'N';
+        case PIECE::Pion: return 'P';
+    }
+    return '?';
+}
+
+std::string buildMoveNotation(const Vec2& from,
+                              const Vec2& to,
+                              const BoardCell& moving,
+                              const BoardCell& captured,
+                              bool givesCheck) {
+    const bool isPawn = moving.piece == static_cast<uint8_t>(PIECE::Pion);
+    const bool isCapture = captured.fill == 1 && captured.side != moving.side;
+
+    std::string notation;
+    if (!isPawn) {
+        notation.push_back(pieceToSymbol(moving.piece));
+    }
+
+    notation += squareToNotation(from);
+    notation.push_back(isCapture ? 'x' : '-');
+    notation += squareToNotation(to);
+
+    if (givesCheck) {
+        notation.push_back('+');
+    }
+
+    return notation;
+}
+
+} // namespace
+
 
 // TODO: the board should be rendered only once, and only pieces should be updated
 
 void Controller::startGame(Io *io, Core *core) {
     bool hasSelection = false;
-    
+
     Vec2 selected{};
-    
+
     SIDE toMove = SIDE::WHITE_SIDE;
+    std::vector<std::string> moveHistory;
 
     while (!WindowShouldClose()) {
         BeginDrawing();
@@ -25,7 +76,7 @@ void Controller::startGame(Io *io, Core *core) {
         }
 
         // Render board and pieces
-        io->renderChessBoard(*core, checkedKingPos);
+        io->renderChessBoard(*core, checkedKingPos, moveHistory);
         // Debug: show FPS
         DrawFPS(10, 10);
         
@@ -53,10 +104,16 @@ void Controller::startGame(Io *io, Core *core) {
                     toRender.clear();
                 } else {
                     // Try moving
+                    const BoardCell movingPiece = core->At(selected);
+                    const BoardCell capturedPiece = core->At(clicked);
+                    const SIDE opponent = (toMove == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
                     bool moved = core->movePiece(selected, clicked);
                     if (moved) {
-                        
-                        toMove = (toMove == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
+
+                        bool givesCheck = core->isKingInCheck(opponent);
+                        moveHistory.push_back(buildMoveNotation(selected, clicked, movingPiece, capturedPiece, givesCheck));
+
+                        toMove = opponent;
                         hasSelection = false;
                         // Clear highlights after move
                         auto &toRender = io->getPossibleMovesToRender();
