@@ -1,6 +1,7 @@
 ﻿#include "Core.h"
 
 #include <iostream>
+#include <cstdlib>
 
 
 Core::Core()
@@ -41,32 +42,41 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
     }
 
     bool legal = false;
-    int deltaX = abs(to.x - from.x);
-    int deltaY = abs(to.y - from.y);
+    int dX = static_cast<int>(to.x) - static_cast<int>(from.x);
+    int dY = static_cast<int>(to.y) - static_cast<int>(from.y);
+    int deltaX = std::abs(dX);
+    int deltaY = std::abs(dY);
+
+    const SIDE movingSide = static_cast<SIDE>(fromCell.side);
+    const SIDE opponentSide = (movingSide == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
 
     switch (fromCell.piece) {
 
     case static_cast<int>(PIECE::Pion): {
-        auto side = static_cast<SIDE>(fromCell.side);
-        int direction = (side == SIDE::WHITE_SIDE) ? -1 : 1;  
-        int startRow = (side == SIDE::WHITE_SIDE) ? 6 : 1;    
-        int dX = to.x - from.x;
-        int dY = to.y - from.y;
+        int direction = (movingSide == SIDE::WHITE_SIDE) ? -1 : 1;
+        int startRow = (movingSide == SIDE::WHITE_SIDE) ? 6 : 1;
 
-		// 1 Step forward
         if (dX == 0 && dY == direction && toCell.fill == 0) {
             legal = true;
         }
-		// 2 Steps forward from starting position
         else if (dX == 0 && dY == 2 * direction && from.y == startRow && toCell.fill == 0) {
             Vec2 intermediate = { static_cast<uint8_t>(from.x), static_cast<uint8_t>(from.y + direction) };
             if (At(intermediate).fill == 0) {
                 legal = true;
             }
         }
-		// Capture diagonally
-        else if (abs(dX) == 1 && dY == direction && toCell.fill == 1) {
+        else if (deltaX == 1 && dY == direction && toCell.fill == 1 && toCell.side != fromCell.side) {
             legal = true;
+        }
+        else if (deltaX == 1 && dY == direction && toCell.fill == 0 && enPassantActive) {
+            if (to.x == enPassantTarget.x && to.y == enPassantTarget.y) {
+                const BoardCell& captured = At(enPassantCapturedPawn);
+                if (captured.fill == 1 &&
+                    captured.piece == static_cast<uint8_t>(PIECE::Pion) &&
+                    captured.side != fromCell.side) {
+                    legal = true;
+                }
+            }
         }
         break;
     }
@@ -79,23 +89,20 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
     }
 
     case static_cast<int>(PIECE::Knight): {
-        // Mouvement en L : 2+1 ou 1+2
         if ((deltaX == 2 && deltaY == 1) || (deltaX == 1 && deltaY == 2)) {
-            legal = true; // Le cavalier saute par-dessus
+            legal = true;
         }
         break;
     }
 
     case static_cast<int>(PIECE::Bishop): {
-        // Se déplace en diagonale
         if (deltaX == deltaY && deltaX > 0) {
             legal = isPathClear(from, to);
         }
         break;
-    }   
+    }
 
     case static_cast<int>(PIECE::Queen): {
-        // Combine Tour + Fou
         if (deltaX == 0 || deltaY == 0 || deltaX == deltaY) {
             legal = isPathClear(from, to);
         }
@@ -103,11 +110,28 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
     }
 
     case static_cast<int>(PIECE::King): {
-        // Une seule case dans toutes les directions
         if (deltaX <= 1 && deltaY <= 1 && (deltaX + deltaY > 0)) {
             legal = true;
-            // TODO: Vérifier que le roi ne se met pas en échec
-            // TODO: Roque
+        }
+        else if (deltaY == 0 && deltaX == 2) {
+            bool kingSide = (dX > 0);
+            bool kingHasMoved = (movingSide == SIDE::WHITE_SIDE) ? whiteKingMoved : blackKingMoved;
+            if (!kingHasMoved && !hasRookMoved(movingSide, kingSide)) {
+                Vec2 rookPos{ static_cast<uint8_t>(kingSide ? 7 : 0), from.y };
+                const BoardCell& rookCell = At(rookPos);
+                if (rookCell.fill == 1 &&
+                    rookCell.piece == static_cast<uint8_t>(PIECE::Rook) &&
+                    rookCell.side == fromCell.side) {
+                    if (isPathClear(from, rookPos) && At(to).fill == 0) {
+                        Vec2 stepSquare{ static_cast<uint8_t>(from.x + (kingSide ? 1 : -1)), from.y };
+                        if (!isSquareAttacked(from, opponentSide) &&
+                            !isSquareAttacked(stepSquare, opponentSide) &&
+                            !isSquareAttacked(to, opponentSide)) {
+                            legal = true;
+                        }
+                    }
+                }
+            }
         }
         break;
     }
@@ -152,29 +176,9 @@ Vec2 Core::findKing(SIDE side) const {
 }
 
 bool Core::isKingInCheck(SIDE kingSide) const {
-    // Find the king's position
     Vec2 kingPos = findKing(kingSide);
-    
-    // Check if any opponent piece can capture the king
     SIDE opponentSide = (kingSide == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
-    
-    // Check all squares for opponent pieces
-    for (uint8_t y = 0; y < 8; ++y) {
-        for (uint8_t x = 0; x < 8; ++x) {
-            Vec2 from{x, y};
-            const BoardCell& cell = At(from);
-            
-            // If we find an opponent piece
-            if (cell.fill == 1 && cell.side == static_cast<uint8_t>(opponentSide)) {
-                // Check if it can legally move to the king's position
-                if (isMoveLegal(from, kingPos)) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    return false;
+    return isSquareAttacked(kingPos, opponentSide);
 }
 
 bool Core::movePiece(const Vec2& from, const Vec2& to) {
@@ -186,6 +190,44 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
     BoardCell originalFrom = At(from);
     BoardCell originalTo = At(to);
 
+    bool originalWhiteKingMoved = whiteKingMoved;
+    bool originalBlackKingMoved = blackKingMoved;
+    bool originalWhiteRookMoved[2] = { whiteRookMoved[0], whiteRookMoved[1] };
+    bool originalBlackRookMoved[2] = { blackRookMoved[0], blackRookMoved[1] };
+    bool originalEnPassantActive = enPassantActive;
+    Vec2 originalEnPassantTarget = enPassantTarget;
+    Vec2 originalEnPassantCapturedPawn = enPassantCapturedPawn;
+
+    bool isCastlingMove = (originalFrom.piece == static_cast<uint8_t>(PIECE::King) &&
+                           std::abs(static_cast<int>(to.x) - static_cast<int>(from.x)) == 2 &&
+                           from.y == to.y);
+
+    bool isEnPassantCapture = (originalFrom.piece == static_cast<uint8_t>(PIECE::Pion) &&
+                               enPassantActive &&
+                               to.x == enPassantTarget.x &&
+                               to.y == enPassantTarget.y &&
+                               originalTo.fill == 0);
+
+    Vec2 rookFromPos{};
+    Vec2 rookToPos{};
+    BoardCell rookFromOriginal{};
+    BoardCell rookToOriginal{};
+    bool adjustRook = false;
+
+    if (isCastlingMove) {
+        bool kingSide = (to.x > from.x);
+        rookFromPos = { static_cast<uint8_t>(kingSide ? 7 : 0), from.y };
+        rookToPos = { static_cast<uint8_t>(kingSide ? 5 : 3), from.y };
+        rookFromOriginal = At(rookFromPos);
+        rookToOriginal = At(rookToPos);
+        adjustRook = true;
+    }
+
+    BoardCell enPassantCapturedOriginal{};
+    if (isEnPassantCapture) {
+        enPassantCapturedOriginal = At(enPassantCapturedPawn);
+    }
+
     // Make the move
     auto& fromCase = At(from);
     auto& toCase = At(to);
@@ -195,14 +237,87 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
     toCase.fill = 1;
     fromCase.raw = 0;
 
+    if (isEnPassantCapture) {
+        At(enPassantCapturedPawn).raw = 0;
+    }
+
+    if (adjustRook) {
+        auto& rookFromCase = At(rookFromPos);
+        auto& rookToCase = At(rookToPos);
+        rookToCase = rookFromCase;
+        rookFromCase.raw = 0;
+    }
+
     // Check if the move puts/leaves own king in check
     SIDE movingSide = static_cast<SIDE>(originalFrom.side);
+
+    if (originalFrom.piece == static_cast<uint8_t>(PIECE::King)) {
+        if (movingSide == SIDE::WHITE_SIDE) {
+            whiteKingMoved = true;
+        } else {
+            blackKingMoved = true;
+        }
+        if (isCastlingMove) {
+            markRookMoved(movingSide, to.x > from.x);
+        }
+    }
+
+    if (originalFrom.piece == static_cast<uint8_t>(PIECE::Rook)) {
+        if (from.y == (movingSide == SIDE::WHITE_SIDE ? 7 : 0)) {
+            if (from.x == 0) {
+                markRookMoved(movingSide, false);
+            } else if (from.x == 7) {
+                markRookMoved(movingSide, true);
+            }
+        }
+    }
+
+    if (originalTo.fill == 1 &&
+        originalTo.piece == static_cast<uint8_t>(PIECE::Rook) &&
+        originalTo.side != originalFrom.side) {
+        handleRookCapture(to, static_cast<SIDE>(originalTo.side));
+    }
+
+    enPassantActive = false;
+    if (originalFrom.piece == static_cast<uint8_t>(PIECE::Pion)) {
+        int direction = (movingSide == SIDE::WHITE_SIDE) ? -1 : 1;
+        if (static_cast<int>(to.y) - static_cast<int>(from.y) == 2 * direction) {
+            enPassantActive = true;
+            enPassantTarget = { static_cast<uint8_t>(from.x), static_cast<uint8_t>(from.y + direction) };
+            enPassantCapturedPawn = to;
+        }
+    }
+
     if (isKingInCheck(movingSide)) {
         // Restore the original position
         At(from) = originalFrom;
         At(to) = originalTo;
+        if (isEnPassantCapture) {
+            At(enPassantCapturedPawn) = enPassantCapturedOriginal;
+        }
+        if (adjustRook) {
+            At(rookFromPos) = rookFromOriginal;
+            At(rookToPos) = rookToOriginal;
+        }
         std::cout << "Move would put/leave own king in check\n";
+        whiteKingMoved = originalWhiteKingMoved;
+        blackKingMoved = originalBlackKingMoved;
+        whiteRookMoved[0] = originalWhiteRookMoved[0];
+        whiteRookMoved[1] = originalWhiteRookMoved[1];
+        blackRookMoved[0] = originalBlackRookMoved[0];
+        blackRookMoved[1] = originalBlackRookMoved[1];
+        enPassantActive = originalEnPassantActive;
+        enPassantTarget = originalEnPassantTarget;
+        enPassantCapturedPawn = originalEnPassantCapturedPawn;
         return false;
+    }
+
+    if (originalFrom.piece == static_cast<uint8_t>(PIECE::Pion)) {
+        if ((movingSide == SIDE::WHITE_SIDE && to.y == 0) ||
+            (movingSide == SIDE::BLACK_SIDE && to.y == 7)) {
+            BoardCell& promoted = At(to);
+            promoted.piece = static_cast<uint8_t>(PIECE::Queen);
+        }
     }
 
     return true;
@@ -263,8 +378,100 @@ inline bool Core::isMoveInBounds(const Vec2& cell) const
     return cell.x < 8 && cell.y < 8;
 }
 
-constexpr inline BoardCell Core::makeCell(PIECE p, SIDE s, bool occupied) noexcept {    
-    
+bool Core::isSquareAttacked(const Vec2& square, SIDE bySide) const
+{
+    for (uint8_t y = 0; y < 8; ++y) {
+        for (uint8_t x = 0; x < 8; ++x) {
+            Vec2 from{ x, y };
+            const BoardCell& cell = At(from);
+            if (cell.fill == 0 || cell.side != static_cast<uint8_t>(bySide)) {
+                continue;
+            }
+
+            int dX = static_cast<int>(square.x) - static_cast<int>(from.x);
+            int dY = static_cast<int>(square.y) - static_cast<int>(from.y);
+            int deltaX = std::abs(dX);
+            int deltaY = std::abs(dY);
+
+            switch (static_cast<PIECE>(cell.piece)) {
+            case PIECE::Pion: {
+                int direction = (bySide == SIDE::WHITE_SIDE) ? -1 : 1;
+                if (dY == direction && deltaX == 1) {
+                    return true;
+                }
+                break;
+            }
+            case PIECE::Knight: {
+                if ((deltaX == 1 && deltaY == 2) || (deltaX == 2 && deltaY == 1)) {
+                    return true;
+                }
+                break;
+            }
+            case PIECE::Bishop: {
+                if (deltaX == deltaY && deltaX > 0) {
+                    if (isPathClear(from, square)) {
+                        return true;
+                    }
+                }
+                break;
+            }
+            case PIECE::Rook: {
+                if (deltaX == 0 || deltaY == 0) {
+                    if (isPathClear(from, square)) {
+                        return true;
+                    }
+                }
+                break;
+            }
+            case PIECE::Queen: {
+                if (deltaX == deltaY || deltaX == 0 || deltaY == 0) {
+                    if (isPathClear(from, square)) {
+                        return true;
+                    }
+                }
+                break;
+            }
+            case PIECE::King: {
+                if (deltaX <= 1 && deltaY <= 1 && (deltaX + deltaY > 0)) {
+                    return true;
+                }
+                break;
+            }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Core::hasRookMoved(SIDE side, bool kingSide) const
+{
+    const bool* rookArray = (side == SIDE::WHITE_SIDE) ? whiteRookMoved : blackRookMoved;
+    return rookArray[kingSide ? 1 : 0];
+}
+
+void Core::markRookMoved(SIDE side, bool kingSide)
+{
+    bool* rookArray = (side == SIDE::WHITE_SIDE) ? whiteRookMoved : blackRookMoved;
+    rookArray[kingSide ? 1 : 0] = true;
+}
+
+void Core::handleRookCapture(const Vec2& pos, SIDE capturedSide)
+{
+    uint8_t homeRank = (capturedSide == SIDE::WHITE_SIDE) ? 7 : 0;
+    if (pos.y != homeRank) {
+        return;
+    }
+
+    if (pos.x == 0) {
+        markRookMoved(capturedSide, false);
+    } else if (pos.x == 7) {
+        markRookMoved(capturedSide, true);
+    }
+}
+
+constexpr inline BoardCell Core::makeCell(PIECE p, SIDE s, bool occupied) noexcept {
+
     BoardCell cell {};
 
     // 3 bits are still not used
