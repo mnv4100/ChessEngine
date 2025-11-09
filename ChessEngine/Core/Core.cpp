@@ -323,8 +323,6 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
     return true;
 }
 
-// TODO: Optimize, this is really bad
-
 std::vector<Vec2> Core::getPossibleMoves(const Vec2 &from) const {
     std::vector<Vec2> moves;
 
@@ -333,15 +331,127 @@ std::vector<Vec2> Core::getPossibleMoves(const Vec2 &from) const {
     const BoardCell &fromCell = At(from);
     if (fromCell.fill == 0) return moves;
 
-    // Enumerate all board squares and collect legal moves
-    for (uint8_t y = 0; y < 8; ++y) {
-        for (uint8_t x = 0; x < 8; ++x) {
-            Vec2 to{ x, y };
-            if (to.x == from.x && to.y == from.y) continue; // skip same square
+    const SIDE movingSide = static_cast<SIDE>(fromCell.side);
+
+    auto tryAddMove = [&](int targetX, int targetY) {
+        if (targetX < 0 || targetX >= 8 || targetY < 0 || targetY >= 8) {
+            return;
+        }
+
+        Vec2 to{ static_cast<uint8_t>(targetX), static_cast<uint8_t>(targetY) };
+        const BoardCell &targetCell = At(to);
+        if (targetCell.fill == 1 && targetCell.side == fromCell.side) {
+            return;
+        }
+
+        if (isMoveLegal(from, to)) {
+            moves.push_back(to);
+        }
+    };
+
+    auto addSlidingMoves = [&](int stepX, int stepY) {
+        int currentX = static_cast<int>(from.x) + stepX;
+        int currentY = static_cast<int>(from.y) + stepY;
+
+        while (currentX >= 0 && currentX < 8 && currentY >= 0 && currentY < 8) {
+            Vec2 to{ static_cast<uint8_t>(currentX), static_cast<uint8_t>(currentY) };
+            const BoardCell &targetCell = At(to);
+
+            if (targetCell.fill == 1 && targetCell.side == fromCell.side) {
+                break;
+            }
+
             if (isMoveLegal(from, to)) {
                 moves.push_back(to);
             }
+
+            if (targetCell.fill == 1) {
+                break;
+            }
+
+            currentX += stepX;
+            currentY += stepY;
         }
+    };
+
+    switch (static_cast<PIECE>(fromCell.piece)) {
+    case PIECE::Pion: {
+        int direction = (movingSide == SIDE::WHITE_SIDE) ? -1 : 1;
+        int startRow = (movingSide == SIDE::WHITE_SIDE) ? 6 : 1;
+
+        // Single step forward
+        int forwardY = static_cast<int>(from.y) + direction;
+        if (forwardY >= 0 && forwardY < 8) {
+            Vec2 forward{ from.x, static_cast<uint8_t>(forwardY) };
+            if (At(forward).fill == 0) {
+                tryAddMove(forward.x, forward.y);
+
+                // Double step from starting rank
+                if (static_cast<int>(from.y) == startRow) {
+                    int doubleForwardY = forwardY + direction;
+                    if (doubleForwardY >= 0 && doubleForwardY < 8) {
+                        Vec2 doubleForward{ from.x, static_cast<uint8_t>(doubleForwardY) };
+                        if (At(doubleForward).fill == 0) {
+                            tryAddMove(doubleForward.x, doubleForward.y);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Captures (including en passant handled by isMoveLegal)
+        tryAddMove(static_cast<int>(from.x) - 1, static_cast<int>(from.y) + direction);
+        tryAddMove(static_cast<int>(from.x) + 1, static_cast<int>(from.y) + direction);
+        break;
+    }
+    case PIECE::Knight: {
+        static constexpr int offsets[8][2] = {
+            { 1, 2 },{ 2, 1 },{ 2, -1 },{ 1, -2 },
+            { -1, -2 },{ -2, -1 },{ -2, 1 },{ -1, 2 }
+        };
+        for (const auto &offset : offsets) {
+            tryAddMove(static_cast<int>(from.x) + offset[0], static_cast<int>(from.y) + offset[1]);
+        }
+        break;
+    }
+    case PIECE::Bishop: {
+        addSlidingMoves(1, 1);
+        addSlidingMoves(1, -1);
+        addSlidingMoves(-1, 1);
+        addSlidingMoves(-1, -1);
+        break;
+    }
+    case PIECE::Rook: {
+        addSlidingMoves(1, 0);
+        addSlidingMoves(-1, 0);
+        addSlidingMoves(0, 1);
+        addSlidingMoves(0, -1);
+        break;
+    }
+    case PIECE::Queen: {
+        addSlidingMoves(1, 0);
+        addSlidingMoves(-1, 0);
+        addSlidingMoves(0, 1);
+        addSlidingMoves(0, -1);
+        addSlidingMoves(1, 1);
+        addSlidingMoves(1, -1);
+        addSlidingMoves(-1, 1);
+        addSlidingMoves(-1, -1);
+        break;
+    }
+    case PIECE::King: {
+        for (int dx = -1; dx <= 1; ++dx) {
+            for (int dy = -1; dy <= 1; ++dy) {
+                if (dx == 0 && dy == 0) continue;
+                tryAddMove(static_cast<int>(from.x) + dx, static_cast<int>(from.y) + dy);
+            }
+        }
+
+        // Castling moves are validated inside isMoveLegal
+        tryAddMove(static_cast<int>(from.x) + 2, static_cast<int>(from.y));
+        tryAddMove(static_cast<int>(from.x) - 2, static_cast<int>(from.y));
+        break;
+    }
     }
 
     return moves;
