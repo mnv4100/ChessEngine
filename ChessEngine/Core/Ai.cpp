@@ -56,15 +56,20 @@ int Ai::pieceValue(PIECE p) const {
 
 int Ai::evaluate(const Core& board) const {
     int score = 0;
-    for (uint8_t y = 0; y < 8; ++y) {
-        for (uint8_t x = 0; x < 8; ++x) {
-            Vec2 pos{ x, y };
-            const BoardCell& cell = board.At(pos);
-            if (cell.fill == 0) continue;
-            PIECE p = static_cast<PIECE>(cell.piece);
-            int val = pieceValue(p);
-            if (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE)) score += val;
-            else score -= val;
+    for (const Vec2& pos : board.filledCell) {
+        const BoardCell& cell = board.At(pos);
+        if (cell.fill == 0) {
+            continue;
+        }
+
+        const PIECE piece = static_cast<PIECE>(cell.piece);
+        const int value = pieceValue(piece);
+
+        if (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE)) {
+            score += value;
+        }
+        else {
+            score -= value;
         }
     }
     return score; // positive = white is better
