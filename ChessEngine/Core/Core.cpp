@@ -2,21 +2,25 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <algorithm>
+#include <optional>
+#include <utility>
 
 
 Core::Core()
 {
     fillChessBoard();
-    
+    setupCache();
 }
 
 
 // if the cell is filled push it to cache 
 void Core::setupCache() {
+    filledCell.clear();
+    filledCell.reserve(32);
     for (size_t y = 0; y < 8; ++y) {
         for (size_t x = 0; x < 8; ++x) {
             size_t index = y * 8 + x;
-            // if the cell is filled add it to the cache
             if (chessBoard[index].fill == 1) {
                 filledCell.push_back(Vec2{ static_cast<uint8_t>(x), static_cast<uint8_t>(y) });
             }
@@ -24,13 +28,32 @@ void Core::setupCache() {
     }
 }
 
-void Core::updateCache(const Vec2& from, const Vec2& to)
+void Core::removeFromCache(const Vec2& pos)
 {
+    auto it = std::remove(filledCell.begin(), filledCell.end(), pos);
+    if (it != filledCell.end()) {
+        filledCell.erase(it, filledCell.end());
+    }
+}
 
-	// replace the old from position with to position with o(1)
-
-	filledCell.erase(std::remove(filledCell.begin(), filledCell.end(), from), filledCell.end());
-	filledCell.push_back(to);
+void Core::updateCache(const Vec2& from,
+    const Vec2& to,
+    bool capturedDestination,
+    std::optional<Vec2> enPassantCaptured,
+    std::optional<std::pair<Vec2, Vec2>> rookMove)
+{
+    removeFromCache(from);
+    if (capturedDestination) {
+        removeFromCache(to);
+    }
+    if (enPassantCaptured.has_value()) {
+        removeFromCache(*enPassantCaptured);
+    }
+    if (rookMove.has_value()) {
+        removeFromCache(rookMove->first);
+        filledCell.push_back(rookMove->second);
+    }
+    filledCell.push_back(to);
 }
 
 void Core::debugDisplayChessBoard() const
@@ -256,7 +279,15 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
     auto& fromCase = At(from);
     auto& toCase = At(to);
 
-    updateCache(from, to);
+    const bool capturedDestination = (originalTo.fill == 1);
+    std::optional<Vec2> enPassantCaptured = std::nullopt;
+    if (isEnPassantCapture) {
+        enPassantCaptured = enPassantCapturedPawn;
+    }
+    std::optional<std::pair<Vec2, Vec2>> rookMoveInfo = std::nullopt;
+    if (adjustRook) {
+        rookMoveInfo = std::make_pair(rookFromPos, rookToPos);
+    }
 
     toCase.piece = fromCase.piece;
     toCase.side = fromCase.side;
@@ -345,6 +376,8 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
             promoted.piece = static_cast<uint8_t>(PIECE::Queen);
         }
     }
+
+    updateCache(from, to, capturedDestination, enPassantCaptured, rookMoveInfo);
 
     return true;
 }

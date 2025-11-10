@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <array>
 #include <map>
+#include <optional>
+#include <utility>
 #include <vector>
 
 #include "definition.h"
@@ -29,9 +31,13 @@ public:
 
 
     void setupCache();
-	void updateCache(const Vec2& from, const Vec2& to);
-	
-	// TODO: implement renew cache
+        void updateCache(const Vec2& from,
+            const Vec2& to,
+            bool capturedDestination,
+            std::optional<Vec2> enPassantCaptured,
+            std::optional<std::pair<Vec2, Vec2>> rookMove);
+
+        // TODO: implement renew cache
     void renewCache() {};
 
 
@@ -52,9 +58,11 @@ public:
 
 
 	[[nodiscard]] const BoardCell& At(const Vec2& pos) const { return chessBoard[pos.y * 8 + pos.x];  };
-	[[nodiscard]] BoardCell& At(const Vec2& pos) { return chessBoard[pos.y * 8 + pos.x]; };
+        [[nodiscard]] BoardCell& At(const Vec2& pos) { return chessBoard[pos.y * 8 + pos.x]; };
 
 private:
+        void removeFromCache(const Vec2& pos);
+
         void fillChessBoard();
         
         [[nodiscard]] inline bool isMoveInBounds(const Vec2& cell) const;
