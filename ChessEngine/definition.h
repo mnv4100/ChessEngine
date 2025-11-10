@@ -5,7 +5,7 @@ struct Vec2 {
 	uint8_t x;
 	uint8_t y;
 
-	/*explicit Vec2(const uint8_t x = 0, const uint8_t y = 0) : x(x), y(y) {}*/
+	bool operator==(const Vec2&) const = default;
 };
 
 enum class PIECE : uint8_t {

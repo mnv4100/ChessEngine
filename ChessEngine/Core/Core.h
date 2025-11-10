@@ -28,6 +28,20 @@ public:
     [[nodiscard]] Vec2 findKing(SIDE side) const;
 
 
+    void setupCache();
+	void updateCache(const Vec2& from, const Vec2& to);
+	
+	// TODO: implement renew cache
+    void renewCache() {};
+
+
+    // setup cache
+    // update cache 
+    // renew cache
+
+    std::vector<Vec2> filledCell;
+
+
     // move generation 
 
 	// make a fake move and see if we can get 
@@ -42,6 +56,7 @@ public:
 
 private:
         void fillChessBoard();
+        
         [[nodiscard]] inline bool isMoveInBounds(const Vec2& cell) const;
 
         bool isSquareAttacked(const Vec2& square, SIDE bySide) const;

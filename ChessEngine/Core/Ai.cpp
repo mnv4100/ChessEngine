@@ -23,41 +23,20 @@ Ai::Ai(Core* corePtr, SIDE side)
 
 
 
-inline void process_board(const BoardCell(&b)[64]) {
-#if defined(__AVX512F__)
-    const auto* p = std::assume_aligned<64>(reinterpret_cast<const std::uint8_t*>(b));
-    __m512i v = _mm512_load_si512(p);         // one 64B load
-    // ... operate on v ...
-    // _mm512_store_si512(...) to write back if needed
-#elif defined(__AVX2__)
-    const auto* p = std::assume_aligned<32>(reinterpret_cast<const std::uint8_t*>(b));
-    const __m256i lo = _mm256_load_si256(reinterpret_cast<const __m256i*>(p + 0));
-    const __m256i hi = _mm256_load_si256(reinterpret_cast<const __m256i*>(p + 32));
-    // ... operate on lo/hi ...
-    // _mm256_store_si256(...) to write back
-#else
-    // Portable: many compilers will auto-vectorize this with -O3 -march=native
-    unsigned acc = 0;
-    for (unsigned i = 0; i < 64; ++i) acc += b[i].raw;
-    (void)acc;
-#endif
-}
-
-
 std::vector<Ai::Move> Ai::generateAllMoves(const Core& board, SIDE side) const {
     std::vector<Move> out;
-    for (uint8_t y = 0; y < 8; ++y) {
-        for (uint8_t x = 0; x < 8; ++x) {
-            Vec2 from{ x, y };
-            const BoardCell& c = board.At(from);
-            if (c.fill == 1 && c.side == static_cast<uint8_t>(side)) {
-                std::vector<Vec2> tos = board.getPossibleMoves(from);
-                for (const auto& t : tos) {
-                    out.push_back(Move{ from, t });
-                }
+    // Optional: if you can estimate count, out.reserve(estimated_moves);
+
+    for (const Vec2& from : board.filledCell) {
+        const BoardCell& c = board.At(from);
+        if (c.fill == 1 && c.side == static_cast<uint8_t>(side)) {
+            const auto tos = board.getPossibleMoves(from);
+            for (const auto& t : tos) {
+                out.push_back(Move{ from, t });
             }
         }
     }
+
     return out;
 }
 

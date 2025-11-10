@@ -1,61 +1,108 @@
 ﻿{
-    "version": 3,
-    "configurePresets": [
-        {
-            "name": "windows-base",
-            "hidden": true,
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "installDir": "${sourceDir}/out/install/${presetName}",
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "cl.exe",
-                "CMAKE_CXX_COMPILER": "cl.exe"
-            },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            }
-        },
-        {
-            "name": "x64-debug",
-            "displayName": "x64 Debug",
-            "inherits": "windows-base",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        },
-        {
-            "name": "x64-release",
-            "displayName": "x64 Release",
-            "inherits": "x64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
-            "name": "x86-debug",
-            "displayName": "x86 Debug",
-            "inherits": "windows-base",
-            "architecture": {
-                "value": "x86",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        },
-        {
-            "name": "x86-release",
-            "displayName": "x86 Release",
-            "inherits": "x86-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        }
-    ]
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+
+  "configurePresets": [
+    {
+      "name": "windows-base",
+      "displayName": "Windows Base (MSVC + Ninja)",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
+
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+
+        "CMAKE_POLICY_DEFAULT_CMP0141": "NEW",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<IF:$<CONFIG:Debug>,Debug,>DLL",
+
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+
+        "CMAKE_C_FLAGS": "/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /diagnostics:column",
+        "CMAKE_CXX_FLAGS": "/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /EHsc /diagnostics:column",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+
+    {
+      "name": "x64-debug",
+      "displayName": "x64 Debug",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS_DEBUG": "/Zi /Od /Ob0 /RTC1",
+        "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Od /Ob0 /RTC1",
+        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/DEBUG:FULL /INCREMENTAL",
+        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/DEBUG:FULL /INCREMENTAL",
+        "CMAKE_PDB_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/out/pdb/${presetName}"
+      }
+    },
+
+    {
+      "name": "x64-release",
+      "displayName": "x64 Release (Max O2 + IPO/LTO)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+
+        "CMAKE_C_FLAGS_RELEASE": "/O2 /Ob2 /Oi /Ot /GF /Gy /Zc:inline /DNDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /Oi /Ot /GF /Gy /Zc:inline /DNDEBUG",
+
+        "CMAKE_EXE_LINKER_FLAGS_RELEASE": "/INCREMENTAL:NO",
+        "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "/INCREMENTAL:NO"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "build-x64-debug",
+      "configurePreset": "x64-debug",
+      "jobs": "${hostNumberOfLogicalCores}"
+    },
+    {
+      "name": "build-x64-release",
+      "configurePreset": "x64-release",
+      "jobs": "${hostNumberOfLogicalCores}"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "test-x64-debug",
+      "configurePreset": "x64-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-x64-release",
+      "configurePreset": "x64-release",
+      "output": { "outputOnFailure": true }
+    }
+  ]
 }

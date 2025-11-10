@@ -7,6 +7,30 @@
 Core::Core()
 {
     fillChessBoard();
+    
+}
+
+
+// if the cell is filled push it to cache 
+void Core::setupCache() {
+    for (size_t y = 0; y < 8; ++y) {
+        for (size_t x = 0; x < 8; ++x) {
+            size_t index = y * 8 + x;
+            // if the cell is filled add it to the cache
+            if (chessBoard[index].fill == 1) {
+                filledCell.push_back(Vec2{ static_cast<uint8_t>(x), static_cast<uint8_t>(y) });
+            }
+        }
+    }
+}
+
+void Core::updateCache(const Vec2& from, const Vec2& to)
+{
+
+	// replace the old from position with to position with o(1)
+
+	filledCell.erase(std::remove(filledCell.begin(), filledCell.end(), from), filledCell.end());
+	filledCell.push_back(to);
 }
 
 void Core::debugDisplayChessBoard() const
@@ -231,6 +255,8 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
     // Make the move
     auto& fromCase = At(from);
     auto& toCase = At(to);
+
+    updateCache(from, to);
 
     toCase.piece = fromCase.piece;
     toCase.side = fromCase.side;
