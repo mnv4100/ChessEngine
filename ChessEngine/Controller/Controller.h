@@ -4,6 +4,7 @@
 
 #include "../Core/Core.h"
 #include "../Io/Io.h"
+#include "../Core/Ai.h"
 
 class Controller {
 public:
@@ -11,6 +12,6 @@ public:
 
     ~Controller() {};
 
-    void startGame(Io *io, Core *core);
+    void startGame(Io *io, Core *core, Ai* ai);
 private:
 };
