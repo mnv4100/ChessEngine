@@ -3,10 +3,12 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <thread>
+#include <future>
+#include <chrono>
 
 namespace
 {
-
     std::string squareToNotation(const Vec2 &pos)
     {
         char file = static_cast<char>('a' + pos.x);
@@ -74,12 +76,16 @@ namespace
 void Controller::startGame(Io *io, Core *core, Ai *ai)
 {
     // Choose which side the player controls
-    SIDE humanSide = SIDE::WHITE_SIDE;
+
+    // if only IA remove this variable
+    auto humanSide = SIDE::WHITE_SIDE;
     bool selectionMade = false;
+    
     while (!selectionMade && !io->shouldClose())
     {
         io->beginFrame();
         auto selection = io->renderSideSelectionPrompt();
+
         if (selection.has_value())
         {
             humanSide = *selection;
@@ -93,7 +99,7 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
         return;
     }
 
-    io->setPlayerPerspective(humanSide);
+    io->setPlayerPerspective(SIDE::BLACK_SIDE);
 
     // local variable
     bool hasSelection = false;
@@ -143,26 +149,41 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
 
         if (isAiTurn)
         {
-            auto optMove = ai->findBestMove(*core, toMove);
-            if (optMove)
-            {
-                const BoardCell movingPiece = core->At(optMove->from);
-                const BoardCell capturedPiece = core->At(optMove->to);
-                const SIDE opponent = (toMove == SIDE::WHITE_SIDE)
-                                          ? SIDE::BLACK_SIDE
-                                          : SIDE::WHITE_SIDE;
 
-                if (core->movePiece(optMove->from, optMove->to))
-                {
-                    bool givesCheck = core->isKingInCheck(opponent);
-                    moveHistory.push_back(
-                        buildMoveNotation(optMove->from, optMove->to,
-                                          movingPiece, capturedPiece, givesCheck));
-                    toMove = opponent;
-                    hasSelection = false;
-                    io->getPossibleMovesToRender().clear();
+            if (!ai->aiThinking) {
+                SIDE sideForThisTurn = toMove;
+                ai->aiThinking = true;
+
+                ai->aiFuture = std::async(std::launch::async, [ai, core, sideForThisTurn]() -> auto {
+                    // Prefer: Position pos = core->snapshot(); return ai->findBestMove(pos, sideForThisTurn);
+                    return ai->findBestMove(*core, sideForThisTurn);
+                    });
+            }
+
+            // 2) Non-blocking check for completion
+            if (ai->aiFuture.valid() &&
+                ai->aiFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+            {
+                auto optMove = ai->aiFuture.get();
+                ai->aiThinking = false;
+
+                if (optMove) {
+                    const BoardCell movingPiece = core->At(optMove->from);
+                    const BoardCell capturedPiece = core->At(optMove->to);
+                    const SIDE opponent = (toMove == SIDE::WHITE_SIDE) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
+
+                    if (core->movePiece(optMove->from, optMove->to)) {
+                        bool givesCheck = core->isKingInCheck(opponent);
+                        moveHistory.push_back(
+                            buildMoveNotation(optMove->from, optMove->to,
+                                movingPiece, capturedPiece, givesCheck));
+                        toMove = opponent;
+                        hasSelection = false;
+                        io->getPossibleMovesToRender().clear();
+                    }
                 }
             }
+
             io->endFrame();
             continue;
         }

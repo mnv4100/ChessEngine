@@ -8,7 +8,7 @@ int main() {
     Io io;
     Controller controller;
     Ai ai(&core);
-
+   
     controller.startGame(&io, &core, &ai);
 
     return 0;

@@ -3,7 +3,8 @@
 #include "Core.h"
 #include "definition.h"
 #include <optional>
-
+#include <future>
+#include <thread>
 
 // Create a new thread for the IA 
 class Ai {
@@ -17,6 +18,9 @@ public:
 	};
 
 	std::optional<Move> findBestMove(const Core& rootBoard, SIDE sideToMove);
+	
+	std::future<std::optional<Move>> aiFuture;
+	bool aiThinking = false;
 
 private:
 	Core* core;

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <cstdint>
 
 struct Vec2 {
@@ -19,7 +19,8 @@ enum class PIECE : uint8_t {
 
 enum class SIDE : uint8_t {
 	WHITE_SIDE = 0,
-	BLACK_SIDE = 1
+	BLACK_SIDE = 1,
+	SPECTATOR_SIDE = 2
 };
 
 union BoardCell {

@@ -64,6 +64,10 @@ Io::Io()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);   // Optional
+    glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);     // Optional
+
 #if defined(__APPLE__)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
@@ -79,6 +83,7 @@ Io::Io()
     }
 
     glfwMakeContextCurrent(window);
+	// VSync
     glfwSwapInterval(1);
 
     if (gladLoadGL(glfwGetProcAddress) == 0)
@@ -87,6 +92,8 @@ Io::Io()
         glfwTerminate();
         throw std::runtime_error("Failed to initialise OpenGL loader");
     }
+
+
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -215,8 +222,11 @@ std::optional<SIDE> Io::renderSideSelectionPrompt()
     const ImGuiIO &io = ImGui::GetIO();
     const ImVec2 windowSize{360.0f, 200.0f};
     const ImVec2 center{io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f};
+    
     ImGui::SetNextWindowPos(ImVec2{center.x - windowSize.x * 0.5f, center.y - windowSize.y * 0.5f}, ImGuiCond_Always);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+	
+
 
     std::optional<SIDE> selection;
     if (ImGui::Begin("Choose your side", nullptr,
@@ -234,6 +244,10 @@ std::optional<SIDE> Io::renderSideSelectionPrompt()
         {
             selection = SIDE::BLACK_SIDE;
         }
+        if (ImGui::Button("Watch AI vs AI", ImVec2{-FLT_MIN, 0.0f}))
+        {
+            selection = std::nullopt;
+		}
     }
     ImGui::End();
 
@@ -354,7 +368,7 @@ void Io::renderChessBoard(Core &core,
                     const float padding = boardCellSize * 0.08f;
                     const ImVec2 imageMin{min.x + padding, min.y + padding};
                     const ImVec2 imageMax{max.x - padding, max.y - padding};
-                    const ImTextureID textureId = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pieceTexture));
+                    const ImTextureID textureId = static_cast<ImTextureID>(pieceTexture);
                     drawList->AddImage(textureId, imageMin, imageMax, ImVec2{uMin, vMin}, ImVec2{uMax, vMax});
                 }
                 else
