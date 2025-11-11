@@ -73,7 +73,7 @@ glad_add_library(glad STATIC API gl:core=3.3)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-    GIT_TAG "v1.92.4"
+    GIT_TAG "docking"
     GIT_PROGRESS TRUE
 )
 

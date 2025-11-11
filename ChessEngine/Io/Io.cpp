@@ -88,7 +88,15 @@ Io::Io()
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     ImGui::StyleColorsDark();
+    ImGuiStyle &style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 
@@ -122,6 +130,7 @@ void Io::beginFrame()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    buildDockspace();
 }
 
 void Io::endFrame()
@@ -135,12 +144,60 @@ void Io::endFrame()
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        GLFWwindow *backupCurrentContext = glfwGetCurrentContext();
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        glfwMakeContextCurrent(backupCurrentContext);
+    }
     glfwSwapBuffers(window);
 }
 
 bool Io::shouldClose() const
 {
     return glfwWindowShouldClose(window) != 0;
+}
+
+void Io::buildDockspace()
+{
+    ImGuiIO &io = ImGui::GetIO();
+    if ((io.ConfigFlags & ImGuiConfigFlags_DockingEnable) == 0)
+    {
+        return;
+    }
+
+    constexpr ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+                                   ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                   ImGuiWindowFlags_NoNavFocus;
+
+    if ((dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode) != 0)
+    {
+        windowFlags |= ImGuiWindowFlags_NoBackground;
+    }
+
+    ImGuiViewport *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    ImGui::SetNextWindowViewport(viewport->ID);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0.0f, 0.0f});
+
+    if (ImGui::Begin("DockSpaceRoot", nullptr, windowFlags))
+    {
+        ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
+        ImGui::DockSpace(dockspaceId, ImVec2{0.0f, 0.0f}, dockspaceFlags);
+    }
+    ImGui::End();
+
+    ImGui::PopStyleVar(3);
 }
 
 std::optional<SIDE> Io::renderSideSelectionPrompt()
