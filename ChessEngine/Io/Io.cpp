@@ -1,6 +1,6 @@
 #include "Io.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <imgui_impl_glfw.h>
@@ -77,7 +77,7 @@ Io::Io()
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
+    if (gladLoadGL(glfwGetProcAddress) == 0)
     {
         glfwDestroyWindow(window);
         glfwTerminate();
