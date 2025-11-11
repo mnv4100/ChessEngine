@@ -8,9 +8,13 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <string>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 namespace
 {
@@ -88,7 +92,15 @@ Io::Io()
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     ImGui::StyleColorsDark();
+    ImGuiStyle &style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 
@@ -100,10 +112,16 @@ Io::Io()
     ImGui_ImplOpenGL3_Init(glslVersion);
 
     boardCellSize = static_cast<float>(cellSize);
+
+    if (!loadPieceSprites())
+    {
+        throw std::runtime_error("Failed to load chess piece sprites");
+    }
 }
 
 Io::~Io()
 {
+    destroyPieceSprites();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -122,6 +140,7 @@ void Io::beginFrame()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    buildDockspace();
 }
 
 void Io::endFrame()
@@ -135,12 +154,60 @@ void Io::endFrame()
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        GLFWwindow *backupCurrentContext = glfwGetCurrentContext();
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        glfwMakeContextCurrent(backupCurrentContext);
+    }
     glfwSwapBuffers(window);
 }
 
 bool Io::shouldClose() const
 {
     return glfwWindowShouldClose(window) != 0;
+}
+
+void Io::buildDockspace()
+{
+    ImGuiIO &io = ImGui::GetIO();
+    if ((io.ConfigFlags & ImGuiConfigFlags_DockingEnable) == 0)
+    {
+        return;
+    }
+
+    constexpr ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+                                   ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                   ImGuiWindowFlags_NoNavFocus;
+
+    if ((dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode) != 0)
+    {
+        windowFlags |= ImGuiWindowFlags_NoBackground;
+    }
+
+    ImGuiViewport *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    ImGui::SetNextWindowViewport(viewport->ID);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0.0f, 0.0f});
+
+    if (ImGui::Begin("DockSpaceRoot", nullptr, windowFlags))
+    {
+        ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
+        ImGui::DockSpace(dockspaceId, ImVec2{0.0f, 0.0f}, dockspaceFlags);
+    }
+    ImGui::End();
+
+    ImGui::PopStyleVar(3);
 }
 
 std::optional<SIDE> Io::renderSideSelectionPrompt()
@@ -256,15 +323,52 @@ void Io::renderChessBoard(Core &core,
                     continue;
                 }
 
-                const char symbol = pieceToSymbol(cell.piece);
-                const float fontSize = boardCellSize * 0.55f;
-                const ImU32 textColor = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE))
-                                            ? ImGui::GetColorU32(ImVec4{0.95f, 0.95f, 0.95f, 1.0f})
-                                            : ImGui::GetColorU32(ImVec4{0.05f, 0.05f, 0.05f, 1.0f});
-                const ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, &symbol, &symbol + 1);
-                const ImVec2 textPos{min.x + (boardCellSize - textSize.x) * 0.5f,
-                                     min.y + (boardCellSize - textSize.y) * 0.5f};
-                drawList->AddText(ImGui::GetFont(), fontSize, textPos, textColor, &symbol, &symbol + 1);
+                if (hasPieceSprites())
+                {
+                    const auto columnIndex = [piece = static_cast<PIECE>(cell.piece)]() -> int {
+                        switch (piece)
+                        {
+                        case PIECE::King:
+                            return 0;
+                        case PIECE::Queen:
+                            return 1;
+                        case PIECE::Bishop:
+                            return 2;
+                        case PIECE::Knight:
+                            return 3;
+                        case PIECE::Rook:
+                            return 4;
+                        case PIECE::Pion:
+                            return 5;
+                        }
+                        return 0;
+                    }();
+
+                    const int rowIndex = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE)) ? 0 : 1;
+
+                    const float uMin = pieceTileSize.x * static_cast<float>(columnIndex) / pieceTextureSize.x;
+                    const float vMin = pieceTileSize.y * static_cast<float>(rowIndex) / pieceTextureSize.y;
+                    const float uMax = pieceTileSize.x * static_cast<float>(columnIndex + 1) / pieceTextureSize.x;
+                    const float vMax = pieceTileSize.y * static_cast<float>(rowIndex + 1) / pieceTextureSize.y;
+
+                    const float padding = boardCellSize * 0.08f;
+                    const ImVec2 imageMin{min.x + padding, min.y + padding};
+                    const ImVec2 imageMax{max.x - padding, max.y - padding};
+                    const ImTextureID textureId = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pieceTexture));
+                    drawList->AddImage(textureId, imageMin, imageMax, ImVec2{uMin, vMin}, ImVec2{uMax, vMax});
+                }
+                else
+                {
+                    const char symbol = pieceToSymbol(cell.piece);
+                    const float fontSize = boardCellSize * 0.55f;
+                    const ImU32 textColor = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE))
+                                                ? ImGui::GetColorU32(ImVec4{0.95f, 0.95f, 0.95f, 1.0f})
+                                                : ImGui::GetColorU32(ImVec4{0.05f, 0.05f, 0.05f, 1.0f});
+                    const ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, &symbol, &symbol + 1);
+                    const ImVec2 textPos{min.x + (boardCellSize - textSize.x) * 0.5f,
+                                         min.y + (boardCellSize - textSize.y) * 0.5f};
+                    drawList->AddText(ImGui::GetFont(), fontSize, textPos, textColor, &symbol, &symbol + 1);
+                }
             }
         }
 
@@ -404,4 +508,75 @@ Vec2 Io::toDisplayCoordinates(const Vec2 &boardCell) const
         return boardCell;
     }
     return Vec2{static_cast<uint8_t>(7 - boardCell.x), static_cast<uint8_t>(7 - boardCell.y)};
+}
+
+bool Io::loadPieceSprites()
+{
+    destroyPieceSprites();
+
+    const std::string texturePath = std::string(ASSETS_PATH) + "Chess_Pieces_Sprite.svg.png";
+
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    stbi_uc *pixels = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!pixels || width <= 0 || height <= 0)
+    {
+        if (pixels)
+        {
+            stbi_image_free(pixels);
+        }
+        return false;
+    }
+
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    if (texture == 0)
+    {
+        stbi_image_free(pixels);
+        return false;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    GLint previousAlignment = 0;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousAlignment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 GL_RGBA,
+                 width,
+                 height,
+                 0,
+                 GL_RGBA,
+                 GL_UNSIGNED_BYTE,
+                 pixels);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, previousAlignment);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    stbi_image_free(pixels);
+
+    pieceTexture = texture;
+    pieceTextureSize = ImVec2{static_cast<float>(width), static_cast<float>(height)};
+    pieceTileSize = ImVec2{pieceTextureSize.x / 6.0f, pieceTextureSize.y / 2.0f};
+
+    return true;
+}
+
+void Io::destroyPieceSprites()
+{
+    if (pieceTexture != 0)
+    {
+        glDeleteTextures(1, &pieceTexture);
+        pieceTexture = 0;
+    }
+    pieceTextureSize = ImVec2{0.0f, 0.0f};
+    pieceTileSize = ImVec2{0.0f, 0.0f};
 }
