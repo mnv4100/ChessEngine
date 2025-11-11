@@ -1,10 +1,14 @@
 #pragma once
 
-#include "raylib.h"
 #include "Core/Core.h"
 
+#include <optional>
 #include <string>
 #include <vector>
+
+#include <imgui.h>
+
+struct GLFWwindow;
 
 class Io {
 
@@ -12,10 +16,27 @@ public:
         explicit Io();
         ~Io();
 
+        void beginFrame();
+        void endFrame();
+        [[nodiscard]] bool shouldClose() const;
+
+        [[nodiscard]] std::optional<SIDE> renderSideSelectionPrompt();
+
         void renderChessBoard(Core& core,
                               const Vec2* checkedKingPos = nullptr,
-                              const std::vector<std::string>& moveHistory = {}) const;
-        void getOveredCell(Vec2& cell) const;
+                              const std::vector<std::string>& moveHistory = {},
+                              const Vec2* selectedCell = nullptr);
+
+        void renderGameInfo(SIDE toMove,
+                            SIDE humanSide,
+                            bool aiTurn,
+                            bool aiVsAi,
+                            const std::string& statusMessage,
+                            const Vec2* selectedCell = nullptr,
+                            bool hasSelection = false);
+
+        [[nodiscard]] bool getOveredCell(Vec2& cell) const;
+        [[nodiscard]] bool consumeBoardClick(Vec2& cell) const;
 
         void setPlayerPerspective(SIDE side) { whitePerspective = (side == SIDE::WHITE_SIDE); }
 
@@ -30,8 +51,13 @@ private:
 
         std::vector<Vec2> possibleMovesToRender;
 
-        Texture2D chessPieceTexture{};
-        Font debugFont{};
+        GLFWwindow* window = nullptr;
+
+        ImVec2 boardOrigin{0.0f, 0.0f};
+        float boardCellSize = 0.0f;
+        bool boardLayoutValid = false;
+
+        ImVec4 clearColor{0.1f, 0.1f, 0.1f, 1.0f};
 
         bool whitePerspective = true;
 

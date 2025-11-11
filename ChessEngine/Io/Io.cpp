@@ -1,164 +1,407 @@
 #include "Io.h"
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+
+#include <algorithm>
+#include <cfloat>
+#include <optional>
+#include <stdexcept>
+#include <string>
+
+namespace
+{
+    constexpr float BOARD_MARGIN = 12.0f;
+    constexpr float MOVE_MARKER_RADIUS_RATIO = 0.18f;
+
+    std::string squareToNotation(const Vec2 &pos)
+    {
+        char file = static_cast<char>('a' + pos.x);
+        char rank = static_cast<char>('8' - pos.y);
+        return {file, rank};
+    }
+
+    char pieceToSymbol(uint8_t piece)
+    {
+        switch (static_cast<PIECE>(piece))
+        {
+        case PIECE::King:
+            return 'K';
+        case PIECE::Queen:
+            return 'Q';
+        case PIECE::Rook:
+            return 'R';
+        case PIECE::Bishop:
+            return 'B';
+        case PIECE::Knight:
+            return 'N';
+        case PIECE::Pion:
+            return 'P';
+        }
+        return '?';
+    }
+
+    ImVec2 centerRect(const ImVec2 &min, float size)
+    {
+        return ImVec2{min.x + size * 0.5f, min.y + size * 0.5f};
+    }
+}
+
 Io::Io()
 {
-	InitWindow(windowSizeX, windowSizeY, "Super Chess Engine");
-	SetTargetFPS(144);
+    if (!glfwInit())
+    {
+        throw std::runtime_error("Failed to initialise GLFW");
+    }
 
-	chessPieceTexture = LoadTexture(ASSETS_PATH "Chess_Pieces_Sprite.svg.png");
-	debugFont = LoadFont(ASSETS_PATH "MONARK.otf");
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#if defined(__APPLE__)
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+#ifdef GLFW_SCALE_TO_MONITOR
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+#endif
+
+    window = glfwCreateWindow(windowSizeX, windowSizeY, "Super Chess Engine", nullptr, nullptr);
+    if (!window)
+    {
+        glfwTerminate();
+        throw std::runtime_error("Failed to create GLFW window");
+    }
+
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
+    {
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        throw std::runtime_error("Failed to initialise OpenGL loader");
+    }
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+
+#if defined(__APPLE__)
+    constexpr const char *glslVersion = "#version 150";
+#else
+    constexpr const char *glslVersion = "#version 330";
+#endif
+    ImGui_ImplOpenGL3_Init(glslVersion);
+
+    boardCellSize = static_cast<float>(cellSize);
 }
 
 Io::~Io()
 {
-        UnloadTexture(chessPieceTexture);
-        UnloadFont(debugFont);
-        CloseWindow();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    if (window)
+    {
+        glfwDestroyWindow(window);
+        window = nullptr;
+    }
+    glfwTerminate();
 }
 
-Vec2 Io::toBoardCoordinates(const Vec2& displayCell) const
+void Io::beginFrame()
 {
-        if (whitePerspective) {
-                return displayCell;
-        }
-        return Vec2{ static_cast<uint8_t>(7 - displayCell.x), static_cast<uint8_t>(7 - displayCell.y) };
+    glfwPollEvents();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 }
 
-Vec2 Io::toDisplayCoordinates(const Vec2& boardCell) const
+void Io::endFrame()
 {
-        if (whitePerspective) {
-                return boardCell;
-        }
-        return Vec2{ static_cast<uint8_t>(7 - boardCell.x), static_cast<uint8_t>(7 - boardCell.y) };
+    ImGui::Render();
+    int displayW = 0;
+    int displayH = 0;
+    glfwGetFramebufferSize(window, &displayW, &displayH);
+    glViewport(0, 0, displayW, displayH);
+    glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window);
 }
 
-// Board
-void Io::renderChessBoard(Core& core,
-                          const Vec2* checkedKingPos,
-                          const std::vector<std::string>& moveHistory) const {
-        if (chessPieceTexture.id == 0) return;
+bool Io::shouldClose() const
+{
+    return glfwWindowShouldClose(window) != 0;
+}
 
-        const int pieceWidth = chessPieceTexture.width / 6;
-        const int pieceHeight = chessPieceTexture.height / 2;
+std::optional<SIDE> Io::renderSideSelectionPrompt()
+{
+    const ImGuiIO &io = ImGui::GetIO();
+    const ImVec2 windowSize{360.0f, 200.0f};
+    const ImVec2 center{io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f};
+    ImGui::SetNextWindowPos(ImVec2{center.x - windowSize.x * 0.5f, center.y - windowSize.y * 0.5f}, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
 
-        for (uint8_t y = 0; y < 8; ++y) {
-                for (uint8_t x = 0; x < 8; ++x) {
-                        const Vec2 displayCell{ x, y };
-                        const Vec2 boardPos = toBoardCoordinates(displayCell);
-                        const BoardCell& cell = core.At(boardPos);
+    std::optional<SIDE> selection;
+    if (ImGui::Begin("Choose your side", nullptr,
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize))
+    {
+        ImGui::Spacing();
+        ImGui::TextWrapped("Choose your side");
+        ImGui::Spacing();
 
-                        Color color;
-                        // Si le roi est en echec et que c'est sa position, colorier en rouge
-                        if (checkedKingPos && checkedKingPos->x == boardPos.x && checkedKingPos->y == boardPos.y) {
-                                color = RED;
-                        } else {
-                                // case pair light gray impart dark
-                                color = (x + y) % 2 == 0 ? LIGHTGRAY : DARKGRAY;
-                        }
+        if (ImGui::Button("Play as White", ImVec2{-FLT_MIN, 0.0f}))
+        {
+            selection = SIDE::WHITE_SIDE;
+        }
+        if (ImGui::Button("Play as Black", ImVec2{-FLT_MIN, 0.0f}))
+        {
+            selection = SIDE::BLACK_SIDE;
+        }
+    }
+    ImGui::End();
 
-                        DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
+    return selection;
+}
 
-                        // choose which side is going to be at the bottom
-                        const int row = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE)) ? 1 : 0;
+void Io::renderChessBoard(Core &core,
+                          const Vec2 *checkedKingPos,
+                          const std::vector<std::string> &moveHistory,
+                          const Vec2 *selectedCell)
+{
+    boardLayoutValid = false;
 
-                        if (!possibleMovesToRender.empty()) {
-                                for (auto& move : possibleMovesToRender) {
-                                        Vec2 displayMove = toDisplayCoordinates(move);
-                                        if (displayMove.x == x && displayMove.y == y) {
-                                                DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
-                                        }
-                                }
-                        }
+    const float boardPixelSize = boardCellSize * 8.0f;
+    ImGui::SetNextWindowSize(ImVec2{boardPixelSize + BOARD_MARGIN * 2.0f, boardPixelSize + BOARD_MARGIN * 2.0f},
+                             ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+    {
+        const ImVec2 startCursor = ImGui::GetCursorScreenPos();
+        boardOrigin = ImVec2{startCursor.x + BOARD_MARGIN, startCursor.y + BOARD_MARGIN};
 
-                        if (cell.fill == 0) continue;
+        ImDrawList *drawList = ImGui::GetWindowDrawList();
+        const ImU32 lightColor = ImGui::GetColorU32(ImVec4{0.86f, 0.86f, 0.86f, 1.0f});
+        const ImU32 darkColor = ImGui::GetColorU32(ImVec4{0.32f, 0.32f, 0.32f, 1.0f});
+        const ImU32 selectedColor = ImGui::GetColorU32(ImVec4{0.85f, 0.65f, 0.22f, 1.0f});
+        const ImU32 checkColor = ImGui::GetColorU32(ImVec4{0.78f, 0.18f, 0.18f, 1.0f});
+        const ImU32 borderColor = ImGui::GetColorU32(ImVec4{0.08f, 0.08f, 0.08f, 1.0f});
+        const ImU32 moveColor = ImGui::GetColorU32(ImVec4{0.1f, 0.45f, 0.89f, 0.85f});
 
-                        const int pieceIndex = cell.piece;
+        Vec2 displaySelected{};
+        bool hasSelected = false;
+        if (selectedCell)
+        {
+            displaySelected = toDisplayCoordinates(*selectedCell);
+            hasSelected = true;
+        }
 
-                        const Rectangle srcRect = {
-                                static_cast<float>(pieceIndex * pieceWidth),
-                                static_cast<float>(row * pieceHeight),
-                                static_cast<float>(pieceWidth),
-                                static_cast<float>(pieceHeight)
-                        };
+        Vec2 displayChecked{};
+        bool hasChecked = false;
+        if (checkedKingPos)
+        {
+            displayChecked = toDisplayCoordinates(*checkedKingPos);
+            hasChecked = true;
+        }
 
-                        const Rectangle destRect = {
-                                static_cast<float>(x) * cellSize,
-                                static_cast<float>(y) * cellSize,
-                                static_cast<float>(cellSize),
-                                static_cast<float>(cellSize)
-                        };
+        for (uint8_t y = 0; y < 8; ++y)
+        {
+            for (uint8_t x = 0; x < 8; ++x)
+            {
+                const Vec2 displayCell{x, y};
+                const Vec2 boardPos = toBoardCoordinates(displayCell);
+                const BoardCell &cell = core.At(boardPos);
 
-                        DrawTexturePro(chessPieceTexture, srcRect, destRect, Vector2{ 0, 0 }, 0.0f, WHITE);
+                const ImVec2 min{boardOrigin.x + static_cast<float>(x) * boardCellSize,
+                                 boardOrigin.y + static_cast<float>(y) * boardCellSize};
+                const ImVec2 max{min.x + boardCellSize, min.y + boardCellSize};
+
+                bool isSelected = hasSelected && displaySelected.x == displayCell.x && displaySelected.y == displayCell.y;
+                bool isChecked = hasChecked && displayChecked.x == displayCell.x && displayChecked.y == displayCell.y;
+
+                ImU32 color = ((x + y) % 2 == 0) ? lightColor : darkColor;
+                if (isSelected)
+                {
+                    color = selectedColor;
                 }
+                if (isChecked)
+                {
+                    color = checkColor;
+                }
+
+                drawList->AddRectFilled(min, max, color);
+                drawList->AddRect(min, max, borderColor, 0.0f, 0, 1.0f);
+
+                for (const auto &move : possibleMovesToRender)
+                {
+                    Vec2 displayMove = toDisplayCoordinates(move);
+                    if (displayMove.x == displayCell.x && displayMove.y == displayCell.y)
+                    {
+                        const ImVec2 center = centerRect(min, boardCellSize);
+                        drawList->AddCircleFilled(center, boardCellSize * MOVE_MARKER_RADIUS_RATIO, moveColor, 32);
+                        break;
+                    }
+                }
+
+                if (cell.fill == 0)
+                {
+                    continue;
+                }
+
+                const char symbol = pieceToSymbol(cell.piece);
+                const float fontSize = boardCellSize * 0.55f;
+                const ImU32 textColor = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE))
+                                            ? ImGui::GetColorU32(ImVec4{0.95f, 0.95f, 0.95f, 1.0f})
+                                            : ImGui::GetColorU32(ImVec4{0.05f, 0.05f, 0.05f, 1.0f});
+                const ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, &symbol, &symbol + 1);
+                const ImVec2 textPos{min.x + (boardCellSize - textSize.x) * 0.5f,
+                                     min.y + (boardCellSize - textSize.y) * 0.5f};
+                drawList->AddText(ImGui::GetFont(), fontSize, textPos, textColor, &symbol, &symbol + 1);
+            }
         }
 
-        const int boardPixelSize = cellSize * 8;
-
-        const float labelFontSize = 20.0f;
-        for (uint8_t x = 0; x < 8; ++x) {
-                char fileChar = static_cast<char>(whitePerspective ? ('A' + x) : ('H' - x));
-                std::string label(1, fileChar);
-                Vector2 bottomPos{ static_cast<float>(x) * cellSize + cellSize / 2.0f, static_cast<float>(boardPixelSize) - 20.0f };
-                Vector2 topPos{ bottomPos.x, 5.0f };
-                Vector2 measure = MeasureTextEx(debugFont, label.c_str(), labelFontSize, 1.0f);
-                bottomPos.x -= measure.x / 2.0f;
-                topPos.x -= measure.x / 2.0f;
-                DrawTextEx(debugFont, label.c_str(), bottomPos, labelFontSize, 1.0f, BLACK);
-                DrawTextEx(debugFont, label.c_str(), topPos, labelFontSize, 1.0f, BLACK);
+        // File labels
+        const ImU32 labelColor = ImGui::GetColorU32(ImVec4{0.9f, 0.9f, 0.9f, 1.0f});
+        for (uint8_t x = 0; x < 8; ++x)
+        {
+            char fileChar = static_cast<char>(whitePerspective ? ('A' + x) : ('H' - x));
+            const std::string label(1, fileChar);
+            const ImVec2 bottomPos{boardOrigin.x + static_cast<float>(x) * boardCellSize + boardCellSize * 0.4f,
+                                   boardOrigin.y + boardPixelSize + 4.0f};
+            const ImVec2 topPos{bottomPos.x, boardOrigin.y - boardCellSize * 0.25f};
+            drawList->AddText(bottomPos, labelColor, label.c_str());
+            drawList->AddText(topPos, labelColor, label.c_str());
         }
 
-        for (uint8_t y = 0; y < 8; ++y) {
-                char rankChar = static_cast<char>(whitePerspective ? ('8' - y) : ('1' + y));
-                std::string label(1, rankChar);
-                Vector2 leftPos{ 5.0f, static_cast<float>(y) * cellSize + cellSize / 2.0f };
-                Vector2 rightPos{ static_cast<float>(boardPixelSize) - 25.0f, leftPos.y };
-                Vector2 measure = MeasureTextEx(debugFont, label.c_str(), labelFontSize, 1.0f);
-                leftPos.y -= measure.y / 2.0f;
-                rightPos.y -= measure.y / 2.0f;
-                DrawTextEx(debugFont, label.c_str(), leftPos, labelFontSize, 1.0f, BLACK);
-                DrawTextEx(debugFont, label.c_str(), rightPos, labelFontSize, 1.0f, BLACK);
+        // Rank labels
+        for (uint8_t y = 0; y < 8; ++y)
+        {
+            char rankChar = static_cast<char>(whitePerspective ? ('8' - y) : ('1' + y));
+            const std::string label(1, rankChar);
+            const ImVec2 leftPos{boardOrigin.x - boardCellSize * 0.35f,
+                                 boardOrigin.y + static_cast<float>(y) * boardCellSize + boardCellSize * 0.4f};
+            const ImVec2 rightPos{boardOrigin.x + boardPixelSize + boardCellSize * 0.1f,
+                                  leftPos.y};
+            drawList->AddText(leftPos, labelColor, label.c_str());
+            drawList->AddText(rightPos, labelColor, label.c_str());
         }
 
-        const Rectangle historyBackground{ static_cast<float>(boardPixelSize), 0.0f,
-                                           static_cast<float>(windowSizeX - boardPixelSize),
-                                           static_cast<float>(windowSizeY) };
+        ImGui::Dummy(ImVec2{boardPixelSize + BOARD_MARGIN * 2.0f, boardPixelSize + BOARD_MARGIN * 2.0f});
+        boardLayoutValid = true;
+    }
+    ImGui::End();
 
-        DrawRectangleRec(historyBackground, Fade(LIGHTGRAY, 0.3f));
-
-        const Vector2 titlePos{ static_cast<float>(boardPixelSize) + 20.0f, 20.0f };
-        DrawTextEx(debugFont, "Move History", titlePos, 24.0f, 1.0f, BLACK);
-
-        const size_t maxDisplayed = 20;
+    if (ImGui::Begin("Move History", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+    {
+        const size_t maxDisplayed = 32;
         const size_t totalMoves = moveHistory.size();
-        const size_t startIndex = (totalMoves > maxDisplayed) ? totalMoves - maxDisplayed : 0;
+        const size_t startIndex = (totalMoves > maxDisplayed) ? totalMoves - maxDisplayed : 0U;
 
-        float textY = titlePos.y + 40.0f;
-        for (size_t i = startIndex; i < totalMoves; ++i) {
-                const bool whiteMove = (i % 2 == 0);
-                const size_t moveNumber = i / 2 + 1;
-
-                std::string entry = std::to_string(moveNumber);
-                entry += whiteMove ? ". " : "... ";
-                entry += moveHistory[i];
-
-                Vector2 textPos{ titlePos.x, textY };
-                DrawTextEx(debugFont, entry.c_str(), textPos, 20.0f, 1.0f, BLACK);
-                textY += 24.0f;
+        for (size_t i = startIndex; i < totalMoves; ++i)
+        {
+            const bool whiteMove = (i % 2 == 0);
+            const size_t moveNumber = i / 2 + 1;
+            std::string entry = std::to_string(moveNumber);
+            entry += whiteMove ? ". " : "... ";
+            entry += moveHistory[i];
+            ImGui::TextUnformatted(entry.c_str());
         }
+    }
+    ImGui::End();
 }
 
-void Io::getOveredCell(Vec2& cell) const {
-	Vector2 m = GetMousePosition();
-	int ix = static_cast<int>(m.x) / cellSize;
-	int iy = static_cast<int>(m.y) / cellSize;
-	if (ix < 0) ix = 0; if (ix > 7) ix = 7;
-	if (iy < 0) iy = 0; if (iy > 7) iy = 7;
-        Vec2 displayCell{ static_cast<uint8_t>(ix), static_cast<uint8_t>(iy) };
-        Vec2 boardCell = toBoardCoordinates(displayCell);
-        cell = boardCell;
+void Io::renderGameInfo(SIDE toMove,
+                        SIDE humanSide,
+                        bool aiTurn,
+                        bool aiVsAi,
+                        const std::string &statusMessage,
+                        const Vec2 *selectedCell,
+                        bool hasSelection)
+{
+    if (ImGui::Begin("Game Info", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+    {
+        ImGui::Text("Current turn: %s", toMove == SIDE::WHITE_SIDE ? "White" : "Black");
+        ImGui::Text("Human plays: %s", humanSide == SIDE::WHITE_SIDE ? "White" : "Black");
+        ImGui::Text("Mode: %s", aiVsAi ? "AI vs AI" : "Human vs AI");
+        ImGui::Text("Active side: %s", aiTurn ? "AI" : "Human");
+        ImGui::Separator();
+        ImGui::TextWrapped("%s", statusMessage.c_str());
+
+        if (hasSelection && selectedCell)
+        {
+            ImGui::Text("Selected: %s", squareToNotation(*selectedCell).c_str());
+        }
+        else
+        {
+            ImGui::TextUnformatted("Selected: --");
+        }
+    }
+    ImGui::End();
 }
 
+bool Io::getOveredCell(Vec2 &cell) const
+{
+    if (!boardLayoutValid)
+    {
+        return false;
+    }
 
+    const ImGuiIO &io = ImGui::GetIO();
+    const ImVec2 mouse = io.MousePos;
+    const float boardPixelSize = boardCellSize * 8.0f;
+    if (mouse.x < boardOrigin.x || mouse.y < boardOrigin.y ||
+        mouse.x >= boardOrigin.x + boardPixelSize || mouse.y >= boardOrigin.y + boardPixelSize)
+    {
+        return false;
+    }
 
+    int ix = static_cast<int>((mouse.x - boardOrigin.x) / boardCellSize);
+    int iy = static_cast<int>((mouse.y - boardOrigin.y) / boardCellSize);
+    ix = std::clamp(ix, 0, 7);
+    iy = std::clamp(iy, 0, 7);
 
+    Vec2 displayCell{static_cast<uint8_t>(ix), static_cast<uint8_t>(iy)};
+    cell = toBoardCoordinates(displayCell);
+    return true;
+}
 
+bool Io::consumeBoardClick(Vec2 &cell) const
+{
+    if (!boardLayoutValid)
+    {
+        return false;
+    }
+
+    if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+    {
+        return false;
+    }
+
+    return getOveredCell(cell);
+}
+
+Vec2 Io::toBoardCoordinates(const Vec2 &displayCell) const
+{
+    if (whitePerspective)
+    {
+        return displayCell;
+    }
+    return Vec2{static_cast<uint8_t>(7 - displayCell.x), static_cast<uint8_t>(7 - displayCell.y)};
+}
+
+Vec2 Io::toDisplayCoordinates(const Vec2 &boardCell) const
+{
+    if (whitePerspective)
+    {
+        return boardCell;
+    }
+    return Vec2{static_cast<uint8_t>(7 - boardCell.x), static_cast<uint8_t>(7 - boardCell.y)};
+}

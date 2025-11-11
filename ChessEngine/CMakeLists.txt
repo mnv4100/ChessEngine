@@ -26,12 +26,11 @@ target_include_directories(${PROJECT_NAME}
 target_compile_definitions(${PROJECT_NAME} PUBLIC
         ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/")
 
-# Link the internal libraries and raylib (fetched in the root CMake)
+# Link the internal libraries (Io already brings the ImGui stack)
 target_link_libraries(${PROJECT_NAME}
         PRIVATE CoreLib
         PRIVATE IOLib
         PRIVATE ControllerLib
-        PRIVATE raylib
 )
 
 

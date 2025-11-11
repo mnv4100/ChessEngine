@@ -8,7 +8,7 @@ target_include_directories(ControllerLib
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Link dependencies (raylib is linked at the executable, keep it there)
+# Link dependencies (Io exposes rendering/backend stack)
 target_link_libraries(ControllerLib
         PUBLIC CoreLib
         PUBLIC IOLib
