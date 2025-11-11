@@ -61,6 +61,8 @@ private:
 
         bool whitePerspective = true;
 
+        void buildDockspace();
+
         [[nodiscard]] Vec2 toBoardCoordinates(const Vec2& displayCell) const;
         [[nodiscard]] Vec2 toDisplayCoordinates(const Vec2& boardCell) const;
 };
