@@ -47,7 +47,7 @@ endif()
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY "https://github.com/glfw/glfw.git"
-    GIT_TAG "3.3.8"
+    GIT_TAG "3.4"
     GIT_PROGRESS TRUE
 )
 
@@ -56,7 +56,7 @@ set(GLAD_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     glad
     GIT_REPOSITORY "https://github.com/Dav1dde/glad.git"
-    GIT_TAG "v0.1.36"
+    GIT_TAG "v2.0.8"
     GIT_PROGRESS TRUE
 )
 
@@ -65,7 +65,7 @@ FetchContent_MakeAvailable(glfw glad)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-    GIT_TAG "v1.90.5"
+    GIT_TAG "v1.92.4"
     GIT_PROGRESS TRUE
 )
 
