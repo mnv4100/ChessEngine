@@ -75,14 +75,54 @@ namespace
 void Controller::startGame(Io *io, Core *core, Ai *ai)
 {
 
+    // Choose which side the player controls
+    SIDE humanSide = SIDE::WHITE_SIDE;
+    bool selectionMade = false;
+    while (!selectionMade && !WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        const char* title = "Choose your side";
+        const char* whitePrompt = "Press W to play as White (you move first)";
+        const char* blackPrompt = "Press B to play as Black (AI moves first)";
+
+        int titleWidth = MeasureText(title, 40);
+        DrawText(title, (GetScreenWidth() - titleWidth) / 2, GetScreenHeight() / 2 - 80, 40, DARKGRAY);
+        DrawText(whitePrompt, (GetScreenWidth() - MeasureText(whitePrompt, 20)) / 2, GetScreenHeight() / 2 - 20, 20, DARKGRAY);
+        DrawText(blackPrompt, (GetScreenWidth() - MeasureText(blackPrompt, 20)) / 2, GetScreenHeight() / 2 + 20, 20, DARKGRAY);
+
+        if (IsKeyPressed(KEY_W))
+        {
+            humanSide = SIDE::WHITE_SIDE;
+            selectionMade = true;
+        }
+        else if (IsKeyPressed(KEY_B))
+        {
+            humanSide = SIDE::BLACK_SIDE;
+            selectionMade = true;
+        }
+
+        EndDrawing();
+    }
+
+    if (WindowShouldClose())
+    {
+        return;
+    }
+
+    io->setPlayerPerspective(humanSide);
+
     // local variable
     bool hasSelection = false;
     Vec2 selected{};
     auto toMove = SIDE::WHITE_SIDE;
     std::vector<std::string> moveHistory;
 
-    // Which side does the AI play? default to BLACK if ai != nullptr
-    SIDE aiSide = (ai != nullptr) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
+    // Which side does the AI play? default to the opposite of the human if ai != nullptr
+    SIDE aiSide = (ai != nullptr)
+                      ? (humanSide == SIDE::WHITE_SIDE ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE)
+                      : SIDE::WHITE_SIDE;
 
     // ?? NEW VARIABLE: toggle this for AI vs AI mode
     bool aiVsAi = false; // set to true for AI vs AI, false for Human vs AI

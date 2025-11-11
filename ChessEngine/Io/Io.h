@@ -9,25 +9,32 @@
 class Io {
 
 public:
-	explicit Io();
-	~Io();
+        explicit Io();
+        ~Io();
 
         void renderChessBoard(Core& core,
                               const Vec2* checkedKingPos = nullptr,
                               const std::vector<std::string>& moveHistory = {}) const;
-	void getOveredCell(Vec2& cell) const;
+        void getOveredCell(Vec2& cell) const;
 
-	// get a reference to the possibleMovesToRender;
-	[[nodiscard]] std::vector<Vec2> &getPossibleMovesToRender() { return possibleMovesToRender; }
+        void setPlayerPerspective(SIDE side) { whitePerspective = (side == SIDE::WHITE_SIDE); }
+
+        // get a reference to the possibleMovesToRender;
+        [[nodiscard]] std::vector<Vec2> &getPossibleMovesToRender() { return possibleMovesToRender; }
 
 private:
-	int windowSizeX = 1100;
-	int windowSizeY = 800;
+        int windowSizeX = 1100;
+        int windowSizeY = 800;
 
-	const int cellSize = 100;
+        const int cellSize = 100;
 
-	std::vector<Vec2> possibleMovesToRender;
+        std::vector<Vec2> possibleMovesToRender;
 
-	Texture2D chessPieceTexture{};
-	Font debugFont{};
+        Texture2D chessPieceTexture{};
+        Font debugFont{};
+
+        bool whitePerspective = true;
+
+        [[nodiscard]] Vec2 toBoardCoordinates(const Vec2& displayCell) const;
+        [[nodiscard]] Vec2 toDisplayCoordinates(const Vec2& boardCell) const;
 };
