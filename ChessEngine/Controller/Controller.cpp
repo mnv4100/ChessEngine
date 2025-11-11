@@ -5,37 +5,48 @@
 #include <string>
 #include <vector>
 
+namespace
+{
 
-namespace {
-
-    std::string squareToNotation(const Vec2& pos) {
+    std::string squareToNotation(const Vec2 &pos)
+    {
         char file = static_cast<char>('a' + pos.x);
         char rank = static_cast<char>('8' - pos.y);
-        return { file, rank };
+        return {file, rank};
     }
 
-    char pieceToSymbol(uint8_t piece) {
-        switch (static_cast<PIECE>(piece)) {
-            case PIECE::King: return 'K';
-            case PIECE::Queen: return 'Q';
-            case PIECE::Rook: return 'R';
-            case PIECE::Bishop: return 'B';
-            case PIECE::Knight: return 'N';
-            case PIECE::Pion: return 'P';
+    char pieceToSymbol(uint8_t piece)
+    {
+        switch (static_cast<PIECE>(piece))
+        {
+        case PIECE::King:
+            return 'K';
+        case PIECE::Queen:
+            return 'Q';
+        case PIECE::Rook:
+            return 'R';
+        case PIECE::Bishop:
+            return 'B';
+        case PIECE::Knight:
+            return 'N';
+        case PIECE::Pion:
+            return 'P';
         }
         return '?';
     }
 
-    std::string buildMoveNotation(const Vec2& from,
-                                  const Vec2& to,
-                                  const BoardCell& moving,
-                                  const BoardCell& captured,
-                                  bool givesCheck) {
+    std::string buildMoveNotation(const Vec2 &from,
+                                  const Vec2 &to,
+                                  const BoardCell &moving,
+                                  const BoardCell &captured,
+                                  bool givesCheck)
+    {
         const bool isPawn = moving.piece == static_cast<uint8_t>(PIECE::Pion);
         const bool isCapture = captured.fill == 1 && captured.side != moving.side;
 
         std::string notation;
-        if (!isPawn) {
+        if (!isPawn)
+        {
             notation.push_back(pieceToSymbol(moving.piece));
         }
 
@@ -43,38 +54,49 @@ namespace {
         notation.push_back(isCapture ? 'x' : '-');
         notation += squareToNotation(to);
 
-        if (givesCheck) {
+        if (givesCheck)
+        {
             notation.push_back('+');
         }
 
         return notation;
-}
+    }
 
 } // namespace
 
-
 // TODO: the board should be rendered only once, and only pieces should be updated
 
-void Controller::startGame(Io* io, Core* core, Ai* ai) {
+// TODO: Trop focalier sur le roi
+// probl�me des tours en early
+// Point bleu en dessous du pion a gray
+// Quand mouvement impossible enlever point bleu
+// Pas de fin de game
+
+void Controller::startGame(Io *io, Core *core, Ai *ai)
+{
+
+    // local variable
     bool hasSelection = false;
     Vec2 selected{};
-    SIDE toMove = SIDE::WHITE_SIDE;
+    auto toMove = SIDE::WHITE_SIDE;
     std::vector<std::string> moveHistory;
 
     // Which side does the AI play? default to BLACK if ai != nullptr
     SIDE aiSide = (ai != nullptr) ? SIDE::BLACK_SIDE : SIDE::WHITE_SIDE;
 
     // ?? NEW VARIABLE: toggle this for AI vs AI mode
-    bool aiVsAi = true; // set to true for AI vs AI, false for Human vs AI
+    bool aiVsAi = false; // set to true for AI vs AI, false for Human vs AI
 
-    while (!WindowShouldClose()) {
+    while (!WindowShouldClose())
+    {
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         // Check if current player's king is in check
-        Vec2* checkedKingPos = nullptr;
+        const Vec2* checkedKingPos = nullptr;
         Vec2 kingPos;
-        if (core->isKingInCheck(toMove)) {
+        if (core->isKingInCheck(toMove))
+        {
             kingPos = core->findKing(toMove);
             checkedKingPos = &kingPos;
         }
@@ -84,29 +106,31 @@ void Controller::startGame(Io* io, Core* core, Ai* ai) {
         DrawFPS(10, 10);
 
         // === AI Turn ===
-        bool isAiTurn = ai && (aiVsAi || toMove == aiSide);
-        if (isAiTurn) {
-            const char* thinking = "AI thinking...";
-            int textW = MeasureText(thinking, 20);
+        if (bool isAiTurn = ai && (aiVsAi || toMove == aiSide))
+        {
+            const auto thinking = "AI thinking...";
+            const int textW = MeasureText(thinking, 20);
             DrawText(thinking, (GetScreenWidth() - textW) / 2, 10, 20, DARKGRAY);
             EndDrawing();
 
             // optional: small wait to visualize turns
-            WaitTime(0.05f);
+            // WaitTime(0.05f);
 
             auto optMove = ai->findBestMove(*core, toMove);
-            if (optMove) {
+            if (optMove)
+            {
                 const BoardCell movingPiece = core->At(optMove->from);
                 const BoardCell capturedPiece = core->At(optMove->to);
                 const SIDE opponent = (toMove == SIDE::WHITE_SIDE)
-                    ? SIDE::BLACK_SIDE
-                    : SIDE::WHITE_SIDE;
+                                          ? SIDE::BLACK_SIDE
+                                          : SIDE::WHITE_SIDE;
 
-                if (core->movePiece(optMove->from, optMove->to)) {
+                if (core->movePiece(optMove->from, optMove->to))
+                {
                     bool givesCheck = core->isKingInCheck(opponent);
                     moveHistory.push_back(
                         buildMoveNotation(optMove->from, optMove->to,
-                            movingPiece, capturedPiece, givesCheck));
+                                          movingPiece, capturedPiece, givesCheck));
                     toMove = opponent;
                 }
             }
@@ -114,47 +138,56 @@ void Controller::startGame(Io* io, Core* core, Ai* ai) {
         }
 
         // === Human Input (only if aiVsAi == false) ===
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
             Vec2 clicked{};
             io->getOveredCell(clicked);
 
-            if (!hasSelection) {
-                const BoardCell& cell = core->At(clicked);
-                if (cell.fill == 1 && cell.side == static_cast<uint8_t>(toMove)) {
+            if (!hasSelection)
+            {
+                const BoardCell &cell = core->At(clicked);
+                if (cell.fill == 1 && cell.side == static_cast<uint8_t>(toMove))
+                {
                     selected = clicked;
                     hasSelection = true;
                     auto possibleMoves = core->getPossibleMoves(selected);
-                    auto& toRender = io->getPossibleMovesToRender();
+                    auto &toRender = io->getPossibleMovesToRender();
                     toRender = possibleMoves;
                 }
             }
-            else {
-                if (clicked.x == selected.x && clicked.y == selected.y) {
+            else
+            {
+                if (clicked.x == selected.x && clicked.y == selected.y)
+                {
                     hasSelection = false;
                     io->getPossibleMovesToRender().clear();
                 }
-                else {
+                else
+                {
                     const BoardCell movingPiece = core->At(selected);
                     const BoardCell capturedPiece = core->At(clicked);
                     const SIDE opponent = (toMove == SIDE::WHITE_SIDE)
-                        ? SIDE::BLACK_SIDE
-                        : SIDE::WHITE_SIDE;
-                    if (core->movePiece(selected, clicked)) {
+                                              ? SIDE::BLACK_SIDE
+                                              : SIDE::WHITE_SIDE;
+                    if (core->movePiece(selected, clicked))
+                    {
                         bool givesCheck = core->isKingInCheck(opponent);
                         moveHistory.push_back(
                             buildMoveNotation(selected, clicked,
-                                movingPiece, capturedPiece, givesCheck));
+                                              movingPiece, capturedPiece, givesCheck));
                         toMove = opponent;
                         hasSelection = false;
                         io->getPossibleMovesToRender().clear();
                     }
-                    else {
-                        const BoardCell& cell = core->At(clicked);
-                        if (cell.fill == 1 && cell.side == static_cast<uint8_t>(toMove)) {
+                    else
+                    {
+                        const BoardCell &cell = core->At(clicked);
+                        if (cell.fill == 1 && cell.side == static_cast<uint8_t>(toMove))
+                        {
                             selected = clicked;
                             hasSelection = true;
                             auto moves = core->getPossibleMoves(selected);
-                            auto& toRender = io->getPossibleMovesToRender();
+                            auto &toRender = io->getPossibleMovesToRender();
                             toRender = moves;
                         }
                     }

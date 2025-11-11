@@ -356,7 +356,7 @@ bool Core::movePiece(const Vec2& from, const Vec2& to) {
             At(rookFromPos) = rookFromOriginal;
             At(rookToPos) = rookToOriginal;
         }
-        std::cout << "Move would put/leave own king in check\n";
+        // std::cout << "Move would put/leave own king in check\n";
         whiteKingMoved = originalWhiteKingMoved;
         blackKingMoved = originalBlackKingMoved;
         whiteRookMoved[0] = originalWhiteRookMoved[0];

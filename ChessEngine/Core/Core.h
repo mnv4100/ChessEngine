@@ -37,7 +37,6 @@ public:
             std::optional<Vec2> enPassantCaptured,
             std::optional<std::pair<Vec2, Vec2>> rookMove);
 
-        // TODO: implement renew cache
     void renewCache() {};
 
 

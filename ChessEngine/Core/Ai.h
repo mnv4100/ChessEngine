@@ -5,10 +5,11 @@
 #include <optional>
 
 
+// Create a new thread for the IA 
 class Ai {
 
 public:
-	Ai(Core* corePtr, SIDE side);
+	Ai(Core* corePtr);
 	
 	struct Move {
 		Vec2 from;
@@ -17,13 +18,10 @@ public:
 
 	std::optional<Move> findBestMove(const Core& rootBoard, SIDE sideToMove);
 
-	
-
 private:
 	Core* core;
-	SIDE side;
 
-	const uint8_t maxdepth = 3;
+	const uint8_t maxdepth = 6;
 
 	// helpers
 	std::vector<Move> generateAllMoves(const Core& board, SIDE side) const;

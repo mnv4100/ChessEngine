@@ -15,13 +15,11 @@ static constexpr int INF = 1000000000;
 
 
 
-Ai::Ai(Core* corePtr, SIDE side)
-	: core(corePtr), side(side)
+Ai::Ai(Core* corePtr)
+	: core(corePtr)
 {
 
 }
-
-
 
 std::vector<Ai::Move> Ai::generateAllMoves(const Core& board, SIDE side) const {
     std::vector<Move> out;
@@ -112,7 +110,11 @@ int Ai::negamax(Core board, int depth, SIDE side, int alpha, int beta) const {
 }
 
 std::optional<Ai::Move> Ai::findBestMove(const Core& rootBoard, SIDE sideToMove) {
+    
+    
     auto moves = generateAllMoves(rootBoard, sideToMove);
+    
+    
     if (moves.empty()) return std::nullopt;
 
     int bestVal = -INF;

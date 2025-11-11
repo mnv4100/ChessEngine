@@ -1,10 +1,6 @@
-﻿{
-  "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 25,
-    "patch": 0
-  },
+{
+  "version": 9,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
 
   "configurePresets": [
     {
@@ -23,86 +19,85 @@
         "CMAKE_CXX_EXTENSIONS": "OFF",
 
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-
         "CMAKE_POLICY_DEFAULT_CMP0141": "NEW",
+
         "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<IF:$<CONFIG:Debug>,Debug,>DLL",
 
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "OFF",
 
-        "CMAKE_C_FLAGS": "/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /diagnostics:column",
-        "CMAKE_CXX_FLAGS": "/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /EHsc /diagnostics:column",
-        "CMAKE_COMPILE_WARNING_AS_ERROR": "OFF"
+        "CHESS_USE_AVX2": "ON",
+        "CHESS_USE_BMI2": "ON",
+
+        "CMAKE_C_FLAGS": "/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /diagnostics:column /MP",
+        "CMAKE_CXX_FLAGS": "/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /EHsc /diagnostics:column /MP"
       },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
 
     {
       "name": "x64-debug",
-      "displayName": "x64 Debug",
+      "displayName": "x64 Debug (full symbols)",
       "inherits": "windows-base",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
+      "architecture": { "value": "x64", "strategy": "external" },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_FLAGS_DEBUG": "/Zi /Od /Ob0 /RTC1",
-        "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Od /Ob0 /RTC1",
+        "CMAKE_C_FLAGS_DEBUG": "/Zi /Od /RTC1 /GS",
+        "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Od /RTC1 /GS",
         "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/DEBUG:FULL /INCREMENTAL",
         "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/DEBUG:FULL /INCREMENTAL",
-        "CMAKE_PDB_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/out/pdb/${presetName}"
+        "CMAKE_PDB_OUTPUT_DIRECTORY": "${sourceDir}/out/pdb/${presetName}",
+        "CMAKE_UNITY_BUILD": "OFF"
+      }
+    },
+
+    {
+      "name": "x64-relwithdebinfo",
+      "displayName": "x64 RelWithDebInfo (fast dev + symbols)",
+      "inherits": "windows-base",
+      "architecture": { "value": "x64", "strategy": "external" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "/O2 /Ob2 /Oi /Gy /GF /Zc:inline /Zi",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "/O2 /Ob2 /Oi /Gy /GF /Zc:inline /Zi",
+        "CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO": "/DEBUG:FASTLINK /INCREMENTAL",
+        "CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO": "/DEBUG:FASTLINK /INCREMENTAL",
+        "CMAKE_PDB_OUTPUT_DIRECTORY": "${sourceDir}/out/pdb/${presetName}",
+        "CMAKE_UNITY_BUILD": "ON"
       }
     },
 
     {
       "name": "x64-release",
-      "displayName": "x64 Release (Max O2 + IPO/LTO)",
+      "displayName": "x64 Release (max speed + IPO/LTO)",
       "inherits": "windows-base",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
+      "architecture": { "value": "x64", "strategy": "external" },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
 
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
 
-        "CMAKE_C_FLAGS_RELEASE": "/O2 /Ob2 /Oi /Ot /GF /Gy /Zc:inline /DNDEBUG",
-        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /Oi /Ot /GF /Gy /Zc:inline /DNDEBUG",
+        "CMAKE_C_FLAGS_RELEASE": "/O2 /Ob2 /Oi /Ot /Gy /Gw /GF /Zc:inline /DNDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /Oi /Ot /Gy /Gw /GF /Zc:inline /DNDEBUG",
 
         "CMAKE_EXE_LINKER_FLAGS_RELEASE": "/INCREMENTAL:NO",
-        "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "/INCREMENTAL:NO"
+        "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "/INCREMENTAL:NO",
+
+        "CMAKE_PDB_OUTPUT_DIRECTORY": "${sourceDir}/out/pdb/${presetName}",
+        "CMAKE_UNITY_BUILD": "ON"
       }
     }
   ],
 
   "buildPresets": [
-    {
-      "name": "build-x64-debug",
-      "configurePreset": "x64-debug",
-      "jobs": "${hostNumberOfLogicalCores}"
-    },
-    {
-      "name": "build-x64-release",
-      "configurePreset": "x64-release",
-      "jobs": "${hostNumberOfLogicalCores}"
-    }
+    { "name": "build-x64-debug", "configurePreset": "x64-debug" },
+    { "name": "build-x64-relwithdebinfo", "configurePreset": "x64-relwithdebinfo" },
+    { "name": "build-x64-release", "configurePreset": "x64-release" }
   ],
 
   "testPresets": [
-    {
-      "name": "test-x64-debug",
-      "configurePreset": "x64-debug",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "test-x64-release",
-      "configurePreset": "x64-release",
-      "output": { "outputOnFailure": true }
-    }
+    { "name": "test-x64-debug", "configurePreset": "x64-debug", "output": { "outputOnFailure": true } },
+    { "name": "test-x64-relwithdebinfo", "configurePreset": "x64-relwithdebinfo", "output": { "outputOnFailure": true } },
+    { "name": "test-x64-release", "configurePreset": "x64-release", "output": { "outputOnFailure": true } }
   ]
 }

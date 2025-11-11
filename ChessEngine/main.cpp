@@ -7,7 +7,7 @@ int main() {
     Core core;
     Io io;
     Controller controller;
-    Ai ai(&core, SIDE::BLACK_SIDE);
+    Ai ai(&core);
 
     controller.startGame(&io, &core, &ai);
 

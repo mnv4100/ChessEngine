@@ -21,7 +21,7 @@ public:
 	[[nodiscard]] std::vector<Vec2> &getPossibleMovesToRender() { return possibleMovesToRender; }
 
 private:
-	int windowSizeX = 1000;
+	int windowSizeX = 1100;
 	int windowSizeY = 800;
 
 	const int cellSize = 100;

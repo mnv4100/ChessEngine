@@ -30,7 +30,7 @@ void Io::renderChessBoard(Core& core,
                         const BoardCell& cell = core.At(Vec2{ x, y });
 
                         Color color;
-                        // Si le roi est en chec et que c'est sa position, colorier en rouge
+                        // Si le roi est en echec et que c'est sa position, colorier en rouge
                         if (checkedKingPos && checkedKingPos->x == x && checkedKingPos->y == y) {
                                 color = RED;
                         } else {
@@ -40,16 +40,16 @@ void Io::renderChessBoard(Core& core,
 
                         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
 
-                        if (!possibleMovesToRender.empty()) {
-                                for (auto& move : possibleMovesToRender) {
-                                        if (move.x == x && move.y == y) {
-                                                DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
-                                        }
-                                }
-                        }
-
                         // choose which side is going to be at the bottom
                         const int row = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE)) ? 1 : 0;
+
+                        if (!possibleMovesToRender.empty()) {
+                            for (auto& move : possibleMovesToRender) {
+                                if (move.x == x && move.y == y) {
+                                    DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
+                                }
+                            }
+                        }
 
                         if (cell.fill == 0) continue;
 
