@@ -11,9 +11,25 @@ Io::Io()
 
 Io::~Io()
 {
-	UnloadTexture(chessPieceTexture);
-	UnloadFont(debugFont);
-	CloseWindow();
+        UnloadTexture(chessPieceTexture);
+        UnloadFont(debugFont);
+        CloseWindow();
+}
+
+Vec2 Io::toBoardCoordinates(const Vec2& displayCell) const
+{
+        if (whitePerspective) {
+                return displayCell;
+        }
+        return Vec2{ static_cast<uint8_t>(7 - displayCell.x), static_cast<uint8_t>(7 - displayCell.y) };
+}
+
+Vec2 Io::toDisplayCoordinates(const Vec2& boardCell) const
+{
+        if (whitePerspective) {
+                return boardCell;
+        }
+        return Vec2{ static_cast<uint8_t>(7 - boardCell.x), static_cast<uint8_t>(7 - boardCell.y) };
 }
 
 // Board
@@ -27,11 +43,13 @@ void Io::renderChessBoard(Core& core,
 
         for (uint8_t y = 0; y < 8; ++y) {
                 for (uint8_t x = 0; x < 8; ++x) {
-                        const BoardCell& cell = core.At(Vec2{ x, y });
+                        const Vec2 displayCell{ x, y };
+                        const Vec2 boardPos = toBoardCoordinates(displayCell);
+                        const BoardCell& cell = core.At(boardPos);
 
                         Color color;
                         // Si le roi est en echec et que c'est sa position, colorier en rouge
-                        if (checkedKingPos && checkedKingPos->x == x && checkedKingPos->y == y) {
+                        if (checkedKingPos && checkedKingPos->x == boardPos.x && checkedKingPos->y == boardPos.y) {
                                 color = RED;
                         } else {
                                 // case pair light gray impart dark
@@ -44,11 +62,12 @@ void Io::renderChessBoard(Core& core,
                         const int row = (cell.side == static_cast<uint8_t>(SIDE::WHITE_SIDE)) ? 1 : 0;
 
                         if (!possibleMovesToRender.empty()) {
-                            for (auto& move : possibleMovesToRender) {
-                                if (move.x == x && move.y == y) {
-                                    DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
+                                for (auto& move : possibleMovesToRender) {
+                                        Vec2 displayMove = toDisplayCoordinates(move);
+                                        if (displayMove.x == x && displayMove.y == y) {
+                                                DrawCircle(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 10.0f, BLUE);
+                                        }
                                 }
-                            }
                         }
 
                         if (cell.fill == 0) continue;
@@ -74,6 +93,32 @@ void Io::renderChessBoard(Core& core,
         }
 
         const int boardPixelSize = cellSize * 8;
+
+        const float labelFontSize = 20.0f;
+        for (uint8_t x = 0; x < 8; ++x) {
+                char fileChar = static_cast<char>(whitePerspective ? ('A' + x) : ('H' - x));
+                std::string label(1, fileChar);
+                Vector2 bottomPos{ static_cast<float>(x) * cellSize + cellSize / 2.0f, static_cast<float>(boardPixelSize) - 20.0f };
+                Vector2 topPos{ bottomPos.x, 5.0f };
+                Vector2 measure = MeasureTextEx(debugFont, label.c_str(), labelFontSize, 1.0f);
+                bottomPos.x -= measure.x / 2.0f;
+                topPos.x -= measure.x / 2.0f;
+                DrawTextEx(debugFont, label.c_str(), bottomPos, labelFontSize, 1.0f, BLACK);
+                DrawTextEx(debugFont, label.c_str(), topPos, labelFontSize, 1.0f, BLACK);
+        }
+
+        for (uint8_t y = 0; y < 8; ++y) {
+                char rankChar = static_cast<char>(whitePerspective ? ('8' - y) : ('1' + y));
+                std::string label(1, rankChar);
+                Vector2 leftPos{ 5.0f, static_cast<float>(y) * cellSize + cellSize / 2.0f };
+                Vector2 rightPos{ static_cast<float>(boardPixelSize) - 25.0f, leftPos.y };
+                Vector2 measure = MeasureTextEx(debugFont, label.c_str(), labelFontSize, 1.0f);
+                leftPos.y -= measure.y / 2.0f;
+                rightPos.y -= measure.y / 2.0f;
+                DrawTextEx(debugFont, label.c_str(), leftPos, labelFontSize, 1.0f, BLACK);
+                DrawTextEx(debugFont, label.c_str(), rightPos, labelFontSize, 1.0f, BLACK);
+        }
+
         const Rectangle historyBackground{ static_cast<float>(boardPixelSize), 0.0f,
                                            static_cast<float>(windowSizeX - boardPixelSize),
                                            static_cast<float>(windowSizeY) };
@@ -108,8 +153,9 @@ void Io::getOveredCell(Vec2& cell) const {
 	int iy = static_cast<int>(m.y) / cellSize;
 	if (ix < 0) ix = 0; if (ix > 7) ix = 7;
 	if (iy < 0) iy = 0; if (iy > 7) iy = 7;
-	cell.x = static_cast<uint8_t>(ix);
-	cell.y = static_cast<uint8_t>(iy);
+        Vec2 displayCell{ static_cast<uint8_t>(ix), static_cast<uint8_t>(iy) };
+        Vec2 boardCell = toBoardCoordinates(displayCell);
+        cell = boardCell;
 }
 
 
