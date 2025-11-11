@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <imgui.h>
+#include <glad/gl.h>
 
 struct GLFWwindow;
 
@@ -60,6 +61,15 @@ private:
         ImVec4 clearColor{0.1f, 0.1f, 0.1f, 1.0f};
 
         bool whitePerspective = true;
+
+        bool loadPieceSprites();
+        void destroyPieceSprites();
+
+        [[nodiscard]] bool hasPieceSprites() const { return pieceTexture != 0; }
+
+        GLuint pieceTexture = 0;
+        ImVec2 pieceTextureSize{0.0f, 0.0f};
+        ImVec2 pieceTileSize{0.0f, 0.0f};
 
         void buildDockspace();
 
