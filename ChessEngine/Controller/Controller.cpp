@@ -1,7 +1,6 @@
 #include "Controller.h"
 
-#include "raylib.h"
-
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -74,39 +73,22 @@ namespace
 
 void Controller::startGame(Io *io, Core *core, Ai *ai)
 {
-
     // Choose which side the player controls
     SIDE humanSide = SIDE::WHITE_SIDE;
     bool selectionMade = false;
-    while (!selectionMade && !WindowShouldClose())
+    while (!selectionMade && !io->shouldClose())
     {
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
-
-        const char* title = "Choose your side";
-        const char* whitePrompt = "Press W to play as White (you move first)";
-        const char* blackPrompt = "Press B to play as Black (AI moves first)";
-
-        int titleWidth = MeasureText(title, 40);
-        DrawText(title, (GetScreenWidth() - titleWidth) / 2, GetScreenHeight() / 2 - 80, 40, DARKGRAY);
-        DrawText(whitePrompt, (GetScreenWidth() - MeasureText(whitePrompt, 20)) / 2, GetScreenHeight() / 2 - 20, 20, DARKGRAY);
-        DrawText(blackPrompt, (GetScreenWidth() - MeasureText(blackPrompt, 20)) / 2, GetScreenHeight() / 2 + 20, 20, DARKGRAY);
-
-        if (IsKeyPressed(KEY_W))
+        io->beginFrame();
+        auto selection = io->renderSideSelectionPrompt();
+        if (selection.has_value())
         {
-            humanSide = SIDE::WHITE_SIDE;
+            humanSide = *selection;
             selectionMade = true;
         }
-        else if (IsKeyPressed(KEY_B))
-        {
-            humanSide = SIDE::BLACK_SIDE;
-            selectionMade = true;
-        }
-
-        EndDrawing();
+        io->endFrame();
     }
 
-    if (WindowShouldClose())
+    if (io->shouldClose())
     {
         return;
     }
@@ -127,13 +109,12 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
     // ?? NEW VARIABLE: toggle this for AI vs AI mode
     bool aiVsAi = false; // set to true for AI vs AI, false for Human vs AI
 
-    while (!WindowShouldClose())
+    while (!io->shouldClose())
     {
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
+        io->beginFrame();
 
         // Check if current player's king is in check
-        const Vec2* checkedKingPos = nullptr;
+        const Vec2 *checkedKingPos = nullptr;
         Vec2 kingPos;
         if (core->isKingInCheck(toMove))
         {
@@ -141,21 +122,27 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
             checkedKingPos = &kingPos;
         }
 
-        // Render board and pieces
-        io->renderChessBoard(*core, checkedKingPos, moveHistory);
-        DrawFPS(10, 10);
+        const Vec2 *selectedPtr = hasSelection ? &selected : nullptr;
+        io->renderChessBoard(*core, checkedKingPos, moveHistory, selectedPtr);
 
-        // === AI Turn ===
-        if (bool isAiTurn = ai && (aiVsAi || toMove == aiSide))
+        const bool isAiTurn = ai && (aiVsAi || toMove == aiSide);
+        std::string statusMessage;
+        if (isAiTurn)
         {
-            const auto thinking = "AI thinking...";
-            const int textW = MeasureText(thinking, 20);
-            DrawText(thinking, (GetScreenWidth() - textW) / 2, 10, 20, DARKGRAY);
-            EndDrawing();
+            statusMessage = "AI thinking...";
+        }
+        else if (toMove == humanSide)
+        {
+            statusMessage = "Your move.";
+        }
+        else
+        {
+            statusMessage = "Waiting for opponent.";
+        }
+        io->renderGameInfo(toMove, humanSide, isAiTurn, aiVsAi, statusMessage, selectedPtr, hasSelection);
 
-            // optional: small wait to visualize turns
-            // WaitTime(0.05f);
-
+        if (isAiTurn)
+        {
             auto optMove = ai->findBestMove(*core, toMove);
             if (optMove)
             {
@@ -172,17 +159,17 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
                         buildMoveNotation(optMove->from, optMove->to,
                                           movingPiece, capturedPiece, givesCheck));
                     toMove = opponent;
+                    hasSelection = false;
+                    io->getPossibleMovesToRender().clear();
                 }
             }
+            io->endFrame();
             continue;
         }
 
-        // === Human Input (only if aiVsAi == false) ===
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        Vec2 clicked{};
+        if (io->consumeBoardClick(clicked))
         {
-            Vec2 clicked{};
-            io->getOveredCell(clicked);
-
             if (!hasSelection)
             {
                 const BoardCell &cell = core->At(clicked);
@@ -235,6 +222,6 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
             }
         }
 
-        EndDrawing();
+        io->endFrame();
     }
 }
