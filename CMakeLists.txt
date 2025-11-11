@@ -51,16 +51,24 @@ FetchContent_Declare(
     GIT_PROGRESS TRUE
 )
 
-# glad OpenGL loader
+# glad OpenGL loader (glad2)
 set(GLAD_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     glad
     GIT_REPOSITORY "https://github.com/Dav1dde/glad.git"
-    GIT_TAG "v2.0.8"
+    GIT_TAG "glad2"
     GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(glfw glad)
+FetchContent_MakeAvailable(glfw)
+
+FetchContent_GetProperties(glad)
+if (NOT glad_POPULATED)
+    FetchContent_Populate(glad)
+endif()
+
+add_subdirectory(${glad_SOURCE_DIR}/cmake glad-cmake)
+glad_add_library(glad STATIC API gl:core=3.3)
 
 FetchContent_Declare(
     imgui
