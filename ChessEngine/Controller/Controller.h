@@ -7,7 +7,5 @@
 #include "../Core/Ai.h"
 
 namespace Controller {
-	
 	void startGame(Io* io, Core* core, Ai* ai);
-
 }

@@ -29,7 +29,13 @@ private:
 
 	// helpers
 	std::vector<Move> generateAllMoves(const Core& board, SIDE side) const;
+
+	void generateAllMovesInto(const Core &board, SIDE side, std::vector<Move> &moves) const;
+
 	int evaluate(const Core& board) const;
+
+	int scoreMoveForOrdering(const Core &board, const Move &m) const;
+
 	int pieceValue(PIECE p) const;
 
 	// negamax with alpha-beta

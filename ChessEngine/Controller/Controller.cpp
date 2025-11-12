@@ -156,7 +156,7 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
                       : SIDE::WHITE_SIDE;
 
     // ?? NEW VARIABLE: toggle this for AI vs AI mode
-    bool aiVsAi = false; // set to true for AI vs AI, false for Human vs AI
+    bool aiVsAi = true; // set to true for AI vs AI, false for Human vs AI
 
     while (!io->shouldClose())
     {
