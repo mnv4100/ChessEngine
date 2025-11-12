@@ -6,10 +6,9 @@
 int main() {
     Core core;
     Io io;
-    Controller controller;
     Ai ai(&core);
    
-    controller.startGame(&io, &core, &ai);
+    Controller::startGame(&io, &core, &ai);
 
     return 0;
 }

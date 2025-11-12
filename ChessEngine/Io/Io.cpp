@@ -64,9 +64,10 @@ Io::Io()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);   // Optional
-    glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);     // Optional
+    //glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+    //glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    //glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
+    //glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
 #if defined(__APPLE__)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -78,12 +79,11 @@ Io::Io()
     window = glfwCreateWindow(windowSizeX, windowSizeY, "Super Chess Engine", nullptr, nullptr);
     if (!window)
     {
-        glfwTerminate();
+        glfwTerminate();    
         throw std::runtime_error("Failed to create GLFW window");
     }
 
     glfwMakeContextCurrent(window);
-	// VSync
     glfwSwapInterval(1);
 
     if (gladLoadGL(glfwGetProcAddress) == 0)
@@ -92,8 +92,6 @@ Io::Io()
         glfwTerminate();
         throw std::runtime_error("Failed to initialise OpenGL loader");
     }
-
-
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -219,35 +217,40 @@ void Io::buildDockspace()
 
 std::optional<SIDE> Io::renderSideSelectionPrompt()
 {
-    const ImGuiIO &io = ImGui::GetIO();
-    const ImVec2 windowSize{360.0f, 200.0f};
-    const ImVec2 center{io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f};
-    
-    ImGui::SetNextWindowPos(ImVec2{center.x - windowSize.x * 0.5f, center.y - windowSize.y * 0.5f}, ImGuiCond_Always);
-    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
-	
-
-
+    const ImGuiIO& io = ImGui::GetIO();
+    const ImVec2 windowSize{ 360.0f, 200.0f };
     std::optional<SIDE> selection;
-    if (ImGui::Begin("Choose your side", nullptr,
-                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize))
+    // const ImVec2 center{ io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f };
+
+    // const ImVec2 center { windowSizeX * 0.5f, windowSizeY * 0.5f };
+
+    // ImGui::SetNextWindowPos(ImVec2{ center.x - windowSize.x * 0.5f, center.y - windowSize.y * 0.5f }, ImGuiCond_Appearing);
+	// ImGui::SetNextWindowPos(ImVec2{ center.x , center.y }, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Appearing);
+
+   
+    if (ImGui::Begin("Choose your side", 
+        nullptr
+		//, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
+
+    ))
     {
         ImGui::Spacing();
         ImGui::TextWrapped("Choose your side");
         ImGui::Spacing();
 
-        if (ImGui::Button("Play as White", ImVec2{-FLT_MIN, 0.0f}))
+        if (ImGui::Button("Play as White", ImVec2{ -FLT_MIN, 0.0f }))
         {
             selection = SIDE::WHITE_SIDE;
         }
-        if (ImGui::Button("Play as Black", ImVec2{-FLT_MIN, 0.0f}))
+        if (ImGui::Button("Play as Black", ImVec2{ -FLT_MIN, 0.0f }))
         {
             selection = SIDE::BLACK_SIDE;
         }
-        if (ImGui::Button("Watch AI vs AI", ImVec2{-FLT_MIN, 0.0f}))
+        if (ImGui::Button("Watch AI vs AI", ImVec2{ -FLT_MIN, 0.0f }))
         {
-            selection = std::nullopt;
-		}
+            selection = SIDE::SPECTATOR_SIDE;
+        }
     }
     ImGui::End();
 
@@ -261,13 +264,18 @@ void Io::renderChessBoard(Core &core,
 {
     boardLayoutValid = false;
 
-    const float boardPixelSize = boardCellSize * 8.0f;
-    ImGui::SetNextWindowSize(ImVec2{boardPixelSize + BOARD_MARGIN * 2.0f, boardPixelSize + BOARD_MARGIN * 2.0f},
-                             ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+    constexpr float WINDOW_SIZE = 900.0f;
+    constexpr float BOARD_PIXEL_SIZE = 800.0f;
+    constexpr float PADDING = (WINDOW_SIZE - BOARD_PIXEL_SIZE) / 2.0f;
+
+    ImGui::SetNextWindowSize(ImVec2{WINDOW_SIZE, WINDOW_SIZE}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2{50.0f, 50.0f}, ImGuiCond_FirstUseEver);
+
+    if (ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar))
     {
+        const ImVec2 windowPadding = ImGui::GetStyle().WindowPadding;
         const ImVec2 startCursor = ImGui::GetCursorScreenPos();
-        boardOrigin = ImVec2{startCursor.x + BOARD_MARGIN, startCursor.y + BOARD_MARGIN};
+        boardOrigin = ImVec2{startCursor.x + PADDING, startCursor.y + PADDING};
 
         ImDrawList *drawList = ImGui::GetWindowDrawList();
         const ImU32 lightColor = ImGui::GetColorU32(ImVec4{0.86f, 0.86f, 0.86f, 1.0f});
@@ -393,8 +401,8 @@ void Io::renderChessBoard(Core &core,
             char fileChar = static_cast<char>(whitePerspective ? ('A' + x) : ('H' - x));
             const std::string label(1, fileChar);
             const ImVec2 bottomPos{boardOrigin.x + static_cast<float>(x) * boardCellSize + boardCellSize * 0.4f,
-                                   boardOrigin.y + boardPixelSize + 4.0f};
-            const ImVec2 topPos{bottomPos.x, boardOrigin.y - boardCellSize * 0.25f};
+                                   boardOrigin.y + BOARD_PIXEL_SIZE + 8.0f};
+            const ImVec2 topPos{bottomPos.x, boardOrigin.y - boardCellSize * 0.35f};
             drawList->AddText(bottomPos, labelColor, label.c_str());
             drawList->AddText(topPos, labelColor, label.c_str());
         }
@@ -404,15 +412,15 @@ void Io::renderChessBoard(Core &core,
         {
             char rankChar = static_cast<char>(whitePerspective ? ('8' - y) : ('1' + y));
             const std::string label(1, rankChar);
-            const ImVec2 leftPos{boardOrigin.x - boardCellSize * 0.35f,
+            const ImVec2 leftPos{boardOrigin.x - boardCellSize * 0.4f,
                                  boardOrigin.y + static_cast<float>(y) * boardCellSize + boardCellSize * 0.4f};
-            const ImVec2 rightPos{boardOrigin.x + boardPixelSize + boardCellSize * 0.1f,
+            const ImVec2 rightPos{boardOrigin.x + BOARD_PIXEL_SIZE + boardCellSize * 0.15f,
                                   leftPos.y};
             drawList->AddText(leftPos, labelColor, label.c_str());
             drawList->AddText(rightPos, labelColor, label.c_str());
         }
 
-        ImGui::Dummy(ImVec2{boardPixelSize + BOARD_MARGIN * 2.0f, boardPixelSize + BOARD_MARGIN * 2.0f});
+        ImGui::Dummy(ImVec2{WINDOW_SIZE, WINDOW_SIZE});
         boardLayoutValid = true;
     }
     ImGui::End();

@@ -73,6 +73,49 @@ namespace
 // Quand mouvement impossible enlever point bleu
 // Pas de fin de game
 
+
+void refactor_startGame(Io *io, Core *core, Ai *ai)
+{
+	// Ask the player which side they want to play 
+	// WHITE, BLACK, SPECTATOR (AI vs AI)
+
+    // PLAYER SELECTION
+        
+#pragma region PlayerSelection
+
+    auto side = std::optional<SIDE>{};
+
+	while (side.has_value() && !io->shouldClose())
+    {
+		io->beginFrame();
+		side = io->renderSideSelectionPrompt();
+        io->setPlayerPerspective(side.value());
+    }
+
+    if (io->shouldClose())
+    {
+        return;
+    }
+#pragma endregion PlayerSelection
+	
+
+	while (!io->shouldClose())
+    {
+        io->beginFrame();
+        
+		io->renderChessBoard(*core, nullptr, {});
+
+
+                
+        io->endFrame();
+	}
+
+
+}
+
+
+
+
 void Controller::startGame(Io *io, Core *core, Ai *ai)
 {
     // Choose which side the player controls
@@ -246,3 +289,5 @@ void Controller::startGame(Io *io, Core *core, Ai *ai)
         io->endFrame();
     }
 }
+
+

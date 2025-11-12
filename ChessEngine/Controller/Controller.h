@@ -6,12 +6,8 @@
 #include "../Io/Io.h"
 #include "../Core/Ai.h"
 
-class Controller {
-public:
-    explicit Controller() {};
+namespace Controller {
+	
+	void startGame(Io* io, Core* core, Ai* ai);
 
-    ~Controller() {};
-
-    void startGame(Io *io, Core *core, Ai* ai);
-private:
-};
+}

@@ -39,7 +39,10 @@ public:
         [[nodiscard]] bool getOveredCell(Vec2& cell) const;
         [[nodiscard]] bool consumeBoardClick(Vec2& cell) const;
 
-        void setPlayerPerspective(SIDE side) { whitePerspective = (side == SIDE::WHITE_SIDE); }
+        void setPlayerPerspective(SIDE side) { 
+            sidePerspective = side;
+        }
+
 
         // get a reference to the possibleMovesToRender;
         [[nodiscard]] std::vector<Vec2> &getPossibleMovesToRender() { return possibleMovesToRender; }
@@ -61,6 +64,7 @@ private:
         ImVec4 clearColor{0.1f, 0.1f, 0.1f, 1.0f};
 
         bool whitePerspective = true;
+		SIDE sidePerspective = SIDE::WHITE_SIDE;
 
         bool loadPieceSprites();
         void destroyPieceSprites();

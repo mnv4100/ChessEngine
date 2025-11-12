@@ -1,4 +1,4 @@
-﻿#include "Core.h"
+#include "Core.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -71,7 +71,7 @@ void Core::debugDisplayChessBoard() const
 bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
 {
     if (!isMoveInBounds(from) || !isMoveInBounds(to)) {
-        std::cout << "Move out of bounds\n";
+        // std::cout << "Move out of bounds\n";
         return false;
     }
 
@@ -79,12 +79,12 @@ bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
     const BoardCell& toCell = At(to);
 
     if (fromCell.fill == 0) {
-        std::cout << "No piece at the from position";
+        // std::cout << "No piece at the from position";
         return false;
     }
 
     if (toCell.fill == 1 && fromCell.side == toCell.side) {
-        std::cout << "Can't Capture ur own piece\n";
+        // std::cout << "Can't Capture ur own piece\n";
         return false;
     }
 
@@ -549,64 +549,61 @@ inline bool Core::isMoveInBounds(const Vec2& cell) const
 
 bool Core::isSquareAttacked(const Vec2& square, SIDE bySide) const
 {
-    for (uint8_t y = 0; y < 8; ++y) {
-        for (uint8_t x = 0; x < 8; ++x) {
-            Vec2 from{ x, y };
-            const BoardCell& cell = At(from);
-            if (cell.fill == 0 || cell.side != static_cast<uint8_t>(bySide)) {
-                continue;
-            }
+    for (const Vec2& from : filledCell) {
+        const BoardCell& cell = At(from);
+        if (cell.side != static_cast<uint8_t>(bySide)) {
+            continue;
+        }
 
-            int dX = static_cast<int>(square.x) - static_cast<int>(from.x);
-            int dY = static_cast<int>(square.y) - static_cast<int>(from.y);
-            int deltaX = std::abs(dX);
-            int deltaY = std::abs(dY);
+        int dX = static_cast<int>(square.x) - static_cast<int>(from.x);
+        int dY = static_cast<int>(square.y) - static_cast<int>(from.y);
+        int deltaX = std::abs(dX);
+        int deltaY = std::abs(dY);
 
-            switch (static_cast<PIECE>(cell.piece)) {
-            case PIECE::Pion: {
-                int direction = (bySide == SIDE::WHITE_SIDE) ? -1 : 1;
-                if (dY == direction && deltaX == 1) {
+        switch (static_cast<PIECE>(cell.piece)) {
+        case PIECE::Pion: {
+            int direction = (bySide == SIDE::WHITE_SIDE) ? -1 : 1;
+            if (dY == direction && deltaX == 1) {
+                return true;
+            }
+            break;
+        }
+        case PIECE::Knight: {
+            if ((deltaX == 1 && deltaY == 2) || (deltaX == 2 && deltaY == 1)) {
+                return true;
+            }
+            break;
+        }
+        case PIECE::Bishop: {
+            if (deltaX == deltaY && deltaX > 0) {
+                if (isPathClear(from, square)) {
                     return true;
                 }
-                break;
             }
-            case PIECE::Knight: {
-                if ((deltaX == 1 && deltaY == 2) || (deltaX == 2 && deltaY == 1)) {
+            break;
+        }
+        case PIECE::Rook: {
+            if (deltaX == 0 || deltaY == 0) {
+                if (isPathClear(from, square)) {
                     return true;
                 }
-                break;
             }
-            case PIECE::Bishop: {
-                if (deltaX == deltaY && deltaX > 0) {
-                    if (isPathClear(from, square)) {
-                        return true;
-                    }
-                }
-                break;
-            }
-            case PIECE::Rook: {
-                if (deltaX == 0 || deltaY == 0) {
-                    if (isPathClear(from, square)) {
-                        return true;
-                    }
-                }
-                break;
-            }
-            case PIECE::Queen: {
-                if (deltaX == deltaY || deltaX == 0 || deltaY == 0) {
-                    if (isPathClear(from, square)) {
-                        return true;
-                    }
-                }
-                break;
-            }
-            case PIECE::King: {
-                if (deltaX <= 1 && deltaY <= 1 && (deltaX + deltaY > 0)) {
+            break;
+        }
+        case PIECE::Queen: {
+            if (deltaX == deltaY || deltaX == 0 || deltaY == 0) {
+                if (isPathClear(from, square)) {
                     return true;
                 }
-                break;
             }
+            break;
+        }
+        case PIECE::King: {
+            if (deltaX <= 1 && deltaY <= 1 && (deltaX + deltaY > 0)) {
+                return true;
             }
+            break;
+        }
         }
     }
 
@@ -625,6 +622,8 @@ void Core::markRookMoved(SIDE side, bool kingSide)
     rookArray[kingSide ? 1 : 0] = true;
 }
 
+
+
 void Core::handleRookCapture(const Vec2& pos, SIDE capturedSide)
 {
     uint8_t homeRank = (capturedSide == SIDE::WHITE_SIDE) ? 7 : 0;
@@ -639,6 +638,8 @@ void Core::handleRookCapture(const Vec2& pos, SIDE capturedSide)
     }
 }
 
+
+// Optimize
 constexpr inline BoardCell Core::makeCell(PIECE p, SIDE s, bool occupied) noexcept {
 
     BoardCell cell {};
