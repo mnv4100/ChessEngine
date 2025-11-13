@@ -3,6 +3,15 @@
 	"version": "1.0",
 	"builtin-baseline": "b1b19307e2d2ec1eefbdb7ea069de7d4bcd31f01",
 	"dependencies": [
-		"sdl3"
+		"sdl3",
+		"sdl3-image",
+		{
+			"name": "imgui",
+			"features": [
+				"sdl3-binding",
+				"sdl3-renderer-binding",
+				"sdlgpu3-binding"
+			]
+		}
 	]
 }

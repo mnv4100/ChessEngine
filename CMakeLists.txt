@@ -22,19 +22,18 @@ target_compile_features(chess_engine PUBLIC cxx_std_20)
 add_executable(chess_cli src/main.cpp)
 target_link_libraries(chess_cli PRIVATE chess_engine)
 
-
 find_package(SDL3 CONFIG REQUIRED)
+find_package(SDL3_image CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 
 add_executable(chess_sdl
     src/sdl_main.cpp
     src/sdl_ui.cpp
 )
 
-target_link_libraries(chess_sdl PRIVATE chess_engine SDL3::SDL3)
+target_link_libraries(chess_sdl PRIVATE chess_engine SDL3_image::SDL3_image SDL3::SDL3 imgui::imgui)
+target_compile_definitions(chess_sdl PRIVATE CHESS_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
 
-if (TARGET SDL3::SDL3main)
-    target_link_libraries(chess_sdl PRIVATE SDL2::SDL2main)
-endif()
 
 if (MSVC)
     target_compile_options(chess_engine PRIVATE /W4 /permissive-)
