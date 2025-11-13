@@ -1,4 +1,8 @@
+############################################
+# Build folders
+############################################
 build/
+build-*/
 cmake-build-*/
 out/
 bin/
@@ -7,6 +11,10 @@ Debug/
 Release/
 x64/
 x86/
+
+############################################
+# Visual Studio / VSCode / CLion
+############################################
 .vs/
 *.sln
 *.vcxproj*
@@ -14,27 +22,78 @@ x86/
 *.opendb
 *.VC.db
 
+# JetBrains CLion
 .idea/
 *.iml
 
+# VSCode CMake Tools
+.vscode/
+cmake-build-debug/
+cmake-build-release/
+
+############################################
+# CMake generated files
+############################################
 CMakeFiles/
 CMakeCache.txt
 CMakeScripts/
 Testing/
 Makefile
 install_manifest.txt
-compile_commands.json
 CTestTestfile.cmake
 cmake_install.cmake
+compile_commands.json
+CMakePresets.json
+CMakeUserPresets.json
 
+############################################
+# vcpkg
+############################################
+# Built packages + binary caches
+vcpkg_installed/
+vcpkg_buildtrees/
+vcpkg_packages/
+vcpkg_downloads/
+vcpkg_cache/
+vcpkg/installed/
+vcpkg/artifacts/
+
+# Manifest mode lock file (optional)
+# Uncomment if you don’t want to commit the lock file:
+# vcpkg-lock.json
+
+############################################
+# Logs / temporary files
+############################################
 *.log
 *.tmp
 *.bak
+*.pid
 
+############################################
+# OS junk
+############################################
 .DS_Store
 Thumbs.db
 
+############################################
+# Executables / libraries
+############################################
 *.exe
 *.dll
 *.so
 *.dylib
+*.lib
+*.a
+*.o
+
+############################################
+# Misc
+############################################
+*.pch
+*.cache
+*.swp
+*.swo
+*.zip
+*.tar
+*.gz

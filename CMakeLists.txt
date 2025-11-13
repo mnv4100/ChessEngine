@@ -22,14 +22,17 @@ target_compile_features(chess_engine PUBLIC cxx_std_20)
 add_executable(chess_cli src/main.cpp)
 target_link_libraries(chess_cli PRIVATE chess_engine)
 
-find_package(SDL2 REQUIRED)
+
+find_package(SDL3 CONFIG REQUIRED)
 
 add_executable(chess_sdl
     src/sdl_main.cpp
     src/sdl_ui.cpp
 )
-target_link_libraries(chess_sdl PRIVATE chess_engine SDL2::SDL2)
-if (TARGET SDL2::SDL2main)
+
+target_link_libraries(chess_sdl PRIVATE chess_engine SDL3::SDL3)
+
+if (TARGET SDL3::SDL3main)
     target_link_libraries(chess_sdl PRIVATE SDL2::SDL2main)
 endif()
 
@@ -42,4 +45,3 @@ else()
     target_compile_options(chess_cli PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(chess_sdl PRIVATE -Wall -Wextra -Wpedantic)
 endif()
-

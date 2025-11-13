@@ -2,7 +2,7 @@
 
 #include "chess/game.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <optional>
 #include <vector>
