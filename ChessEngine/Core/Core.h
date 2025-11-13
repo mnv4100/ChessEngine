@@ -22,7 +22,7 @@ public:
 	~Core() = default;
 
 	void debugDisplayChessBoard() const;
-	bool isMoveLegal(const Vec2& from, const Vec2& to) const;
+	[[nodiscard]] bool isMoveLegal(const Vec2& from, const Vec2& to) const;
     bool isPathClear(const Vec2& from, const Vec2& to) const;
     bool movePiece(const Vec2& from, const Vec2& to);
     [[nodiscard]] bool isKingInCheck(SIDE kingSide) const;
@@ -64,7 +64,7 @@ private:
 
         void fillChessBoard();
         
-        [[nodiscard]] inline bool isMoveInBounds(const Vec2& cell) const;
+        [[nodiscard]] static inline bool isMoveInBounds(const Vec2& cell) ;
 
         bool isSquareAttacked(const Vec2& square, SIDE bySide) const;
 

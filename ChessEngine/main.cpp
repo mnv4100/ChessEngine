@@ -8,7 +8,7 @@ int main() {
     Io io;
     Ai ai(&core);
    
-    Controller::startGame(&io, &core, &ai);
+    Controller::refactor_startGame(&io, &core, &ai);
 
     return 0;
 }

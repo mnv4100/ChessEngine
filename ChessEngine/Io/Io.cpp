@@ -218,7 +218,7 @@ void Io::buildDockspace()
 std::optional<SIDE> Io::renderSideSelectionPrompt()
 {
     const ImGuiIO& io = ImGui::GetIO();
-    const ImVec2 windowSize{ 360.0f, 200.0f };
+    constexpr ImVec2 windowSize{ 360.0f, 200.0f };
     std::optional<SIDE> selection;
     // const ImVec2 center{ io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f };
 
@@ -256,6 +256,29 @@ std::optional<SIDE> Io::renderSideSelectionPrompt()
 
     return selection;
 }
+
+void Io::refactorRenderChessBoard(Core* core) {
+
+    boardLayoutValid = false;
+
+    ImGui::SetNextWindowSize(WindowSize, ImGuiCond_FirstUseEver);
+    // Need to make a window pose members
+    ImGui::SetNextWindowPos(ImVec2{ 50.0f, 50.0f }, ImGuiCond_FirstUseEver);
+
+    if (ImGui::Begin("Chess Board",
+        nullptr,
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoScrollbar))
+    {
+
+
+
+    }
+
+};
+
 
 void Io::renderChessBoard(Core &core,
                           const Vec2 *checkedKingPos,
@@ -460,6 +483,7 @@ void Io::renderGameInfo(SIDE toMove,
         ImGui::Text("Active side: %s", aiTurn ? "AI" : "Human");
         ImGui::Separator();
         ImGui::TextWrapped("%s", statusMessage.c_str());
+
 
         if (hasSelection && selectedCell)
         {

@@ -8,4 +8,5 @@
 
 namespace Controller {
 	void startGame(Io* io, Core* core, Ai* ai);
+	void refactor_startGame(Io *io, Core *core, Ai *ai);
 }

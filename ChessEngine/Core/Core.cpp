@@ -71,27 +71,25 @@ void Core::debugDisplayChessBoard() const
 bool Core::isMoveLegal(const Vec2& from, const Vec2& to) const
 {
     if (!isMoveInBounds(from) || !isMoveInBounds(to)) {
-        // std::cout << "Move out of bounds\n";
         return false;
     }
 
-    const BoardCell& fromCell = At(from);
-    const BoardCell& toCell = At(to);
+    const auto& fromCell = At(from);
+    const auto& toCell = At(to);
 
     if (fromCell.fill == 0) {
-        // std::cout << "No piece at the from position";
         return false;
     }
 
     if (toCell.fill == 1 && fromCell.side == toCell.side) {
-        // std::cout << "Can't Capture ur own piece\n";
         return false;
     }
 
     bool legal = false;
+
     int dX = static_cast<int>(to.x) - static_cast<int>(from.x);
     int dY = static_cast<int>(to.y) - static_cast<int>(from.y);
-    int deltaX = std::abs(dX);
+     int deltaX = std::abs(dX);
     int deltaY = std::abs(dY);
 
     const SIDE movingSide = static_cast<SIDE>(fromCell.side);
@@ -542,7 +540,7 @@ void Core::fillChessBoard()
     }
 }
 
-inline bool Core::isMoveInBounds(const Vec2& cell) const
+inline bool Core::isMoveInBounds(const Vec2& cell)
 {
     return cell.x < 8 && cell.y < 8;
 }

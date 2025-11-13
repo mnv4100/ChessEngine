@@ -25,7 +25,7 @@ public:
 private:
 	Core* core;
 
-	const uint8_t maxdepth = 6;
+	uint8_t maxdepth = 6;
 
 	// helpers
 	std::vector<Move> generateAllMoves(const Core& board, SIDE side) const;

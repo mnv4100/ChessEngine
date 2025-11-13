@@ -23,6 +23,8 @@ public:
 
         [[nodiscard]] std::optional<SIDE> renderSideSelectionPrompt();
 
+        void refactorRenderChessBoard(Core *core);
+
         void renderChessBoard(Core& core,
                               const Vec2* checkedKingPos = nullptr,
                               const std::vector<std::string>& moveHistory = {},
@@ -50,6 +52,8 @@ public:
 private:
         int windowSizeX = 800;
         int windowSizeY = 800;
+
+        ImVec2 WindowSize {800, 800};
 
         const int cellSize = 100;
 
